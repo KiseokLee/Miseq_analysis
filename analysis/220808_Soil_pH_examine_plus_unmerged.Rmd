@@ -1,0 +1,2329 @@
+---
+title: "220808_Soil_pH_examine_plus_unmerged"
+author: "Kiseok Lee"
+date: "2022-08-07"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+```{r global_options, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(fig.width=11, fig.height=9,
+                      error=TRUE, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE,
+                      tidy.opts=list(width.cutoff=40),tidy=TRUE)
+```
+
+## pH perturabtion and adaptation - examining new pipeline where I include unmerged reads
+Researcher & Analysis: **Kiseok Lee** \
+Experiment Date: 6/10/22 - 6/17/22 (5 day each) \
+Analysis Date: 8/8/22 \
+Lab: **Seppe Kuehn** at UChicago \
+
+## Import libraries and setup
+```{r}
+# libraries
+library(phyloseq)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(vegan)
+library(tidyverse)
+library(magrittr)
+library(readxl)
+library(reshape2)
+library(gtools)
+library(devtools)
+library(openxlsx)
+library(ape)
+library(stringr)
+library(tidyr)
+library(ggrepel)
+library(ggpubr)
+library(scales)
+require(gridExtra)
+library(grid)
+library(agricolae)
+
+library(BiocManager)
+
+
+# do I need these?
+#library(seqtime)
+# BiocManager::install("seqtime")
+library(metagenomeSeq)
+# BiocManager::install("metagenomeSeq", version = "3.12")
+
+
+# color collection
+my_color_collection <- c(
+  "#CBD588", "#5F7FC7", "orange", "#AD6F3B", "#673770", 
+  "#D14285", "#652926", "#C84248", "#8569D5", "#5E738F",
+  "#D1A33D", "#8A7C64", "#599861","#616163", "#FFCDB2",
+  "#6D9F71", "#242F40",
+  "#CCA43B", "#F92A82", "#ED7B84", "#7EB77F", 
+  "#DEC4A1", "#E5D1D0", '#0E8482', '#C9DAEA', '#337357', 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  '#9FB1BC', '#D3D0CB', '#E2C044', '#5BC0EB', '#FDE74C', 
+  '#9BC53D', '#E55934', '#FA7921', "#CD9BCD", "#508578", "#DA5724")
+
+my_color_collection2 <- c(
+  "gray",'black',"#CBD588", "#5F7FC7", "orange",  
+  "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
+  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861",
+  '#E55812',  "#FFCDB2", "#242F40", "#6D9F71", "#CCA43B", 
+  "#F92A82", "#ED7B84", "#5F7FC7", 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  '#9FB1BC', '#D3D0CB', '#E2C044', '#5BC0EB', '#FDE74C', 
+  '#9BC53D', '#E55934', '#FA7921', "#CD9BCD", "#508578", "#DA5724",
+  "#CBD588", "#5F7FC7", "orange",  
+  "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
+  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861",
+  "#616163",  "#FFCDB2", "#242F40", "#6D9F71", 
+  "#CCA43B", "#F92A82", "#ED7B84", "#7EB77F", 
+  "#DEC4A1", "#E5D1D0", '#0E8482', '#C9DAEA', '#337357', 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  '#9FB1BC', '#D3D0CB', '#E2C044', '#5BC0EB', '#FDE74C', 
+  '#9BC53D', '#E55934', '#FA7921', "#CD9BCD", "#508578", "#DA5724",
+  "#CBD588", "#5F7FC7", "orange",  
+  "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
+  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861",
+  "#616163",  "#FFCDB2", "#242F40", "#6D9F71", 
+  "#CCA43B", "#F92A82", "#ED7B84", "#7EB77F", 
+  "#DEC4A1", "#E5D1D0", '#0E8482', '#C9DAEA', '#337357', 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  '#9FB1BC', '#D3D0CB', '#E2C044', '#5BC0EB', '#FDE74C', 
+  '#9BC53D', '#E55934', '#FA7921', "#CD9BCD", "#508578", "#DA5724"
+)
+
+my_color_300 <- c(
+  "black","#CBD588", "#5F7FC7", "orange",  
+  "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
+  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861",
+  "#616163",  "#FFCDB2", "#242F40", "#6D9F71", 
+   "#CCA43B", "#F92A82", "#ED7B84", "#7EB77F", 
+  "#DEC4A1", "#E5D1D0", '#0E8482', '#C9DAEA', '#337357', 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  '#9FB1BC', '#D3D0CB', '#E2C044', '#5BC0EB', '#FDE74C', 
+  '#9BC53D', '#E55934', '#FA7921', "#CD9BCD", "#508578", "#DA5724",
+  "#CBD588", "#5F7FC7", "orange",  
+  "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
+  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861",
+  "#616163",  "#FFCDB2", "#242F40", "#6D9F71", 
+   "#CCA43B", "#F92A82", "#ED7B84", "#7EB77F", 
+  "#DEC4A1", "#E5D1D0", '#0E8482', '#C9DAEA', '#337357', 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  '#9FB1BC', '#D3D0CB', '#E2C044', '#5BC0EB', '#FDE74C', 
+  '#9BC53D', '#E55934', '#FA7921', "#CD9BCD", "#508578", "#DA5724",
+  "#CBD588", "#5F7FC7", "orange",  
+  "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
+  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861",
+  "#616163",  "#FFCDB2", "#242F40", "#6D9F71", 
+   "#CCA43B", "#F92A82", "#ED7B84", "#7EB77F", 
+  "#DEC4A1", "#E5D1D0", '#0E8482', '#C9DAEA', '#337357', 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  '#9FB1BC', '#D3D0CB', '#E2C044', '#5BC0EB', '#FDE74C', 
+  '#9BC53D', '#E55934', '#FA7921', "#CD9BCD", "#508578", "#DA5724",
+  "#CBD588", "#5F7FC7", "orange",  
+  "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
+  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861",
+  "#616163",  "#FFCDB2", "#242F40", "#6D9F71", 
+   "#CCA43B", "#F92A82", "#ED7B84", "#7EB77F", 
+  "#DEC4A1", "#E5D1D0", '#0E8482', '#C9DAEA', '#337357', 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  '#9FB1BC', '#D3D0CB', '#E2C044', '#5BC0EB', '#FDE74C', 
+  '#9BC53D', '#E55934', '#FA7921', "#CD9BCD", "#508578", "#DA5724",
+  "#CBD588", "#5F7FC7", "orange",  
+  "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
+  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861",
+  "#616163",  "#FFCDB2", "#242F40", "#6D9F71", 
+   "#CCA43B", "#F92A82", "#ED7B84", "#7EB77F", 
+  "#DEC4A1", "#E5D1D0", '#0E8482', '#C9DAEA', '#337357', 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  '#9FB1BC', '#D3D0CB', '#E2C044', '#5BC0EB', '#FDE74C', 
+  '#9BC53D', '#E55934', '#FA7921', "#CD9BCD", "#508578", "#DA5724",
+  "#CBD588", "#5F7FC7", "orange",  
+  "#AD6F3B", "#673770","#D14285", "#652926", "#C84248", 
+  "#8569D5", "#5E738F","#D1A33D", "#8A7C64", "#599861",
+  "#616163",  "#FFCDB2", "#242F40", "#6D9F71", 
+   "#CCA43B", "#F92A82", "#ED7B84", "#7EB77F", 
+  "#DEC4A1", "#E5D1D0", '#0E8482', '#C9DAEA', '#337357', 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  '#9FB1BC', '#D3D0CB', '#E2C044', '#5BC0EB', '#FDE74C', 
+  '#9BC53D', '#E55934', '#FA7921', "#CD9BCD", "#508578", "#DA5724",
+  "#CBD588", "#5F7FC7", "orange")
+
+## theme for ggplot
+mytheme <- theme_bw() + 
+  theme(text = element_text(face="bold", colour = 'black'),
+        plot.title = element_text(size = 19,hjust = 0.5,face="bold", colour = 'black'),
+        axis.title.x = element_text(size = 17,hjust = 0.5,face="bold", colour = 'black'),
+        axis.title.y = element_text(size = 17,hjust = 0.5,face="bold", colour = 'black'),
+        axis.text.x = element_text(hjust = 0.5, vjust=0.3,size=13,face="bold", colour = 'black'),
+        axis.text.y = element_text(size=13,face="bold", colour = 'black'),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),panel.background=element_blank(),panel.border=element_blank(),plot.background=element_blank(),
+        axis.ticks = element_line(size = 1.1),
+        legend.text=element_text(size=10,face="bold", colour = 'black'))
+
+mytheme_2d <- theme_bw() +
+  theme(text = element_text(face="bold", colour = 'black'),
+        plot.title = element_text(size = 19,hjust = 0.5,face="bold", colour = 'black'),
+        axis.title.x = element_text(size = 17,hjust = 0.5,face="bold", colour = 'black'),
+        axis.title.y = element_text(size = 17,hjust = 0.5,face="bold", colour = 'black'),
+        axis.text.x = element_text(hjust = 0.5, vjust=0.3,size=13,face="bold", colour = 'black'),
+        axis.text.y = element_text(size=13,face="bold", colour = 'black'),
+        axis.ticks = element_line(size = 1.1),
+        legend.text=element_text(size=10,face="bold", colour = 'black'),
+        panel.grid.major = element_blank(),
+        panel.background=element_blank(),plot.background=element_blank()
+        )
+
+mytheme_2dy <- theme_bw() +
+  theme(text = element_text(face="bold", colour = 'black'),
+        plot.title = element_text(size = 19,hjust = 0.5,face="bold", colour = 'black'),
+        axis.title.x = element_text(size = 17,hjust = 0.5,face="bold", colour = 'black'),
+        axis.title.y = element_text(size = 17,hjust = 0.5,face="bold", colour = 'black'),
+        axis.text.x = element_text(hjust = 0.5, vjust=0.3,size=13,face="bold", colour = 'black'),
+        axis.text.y = element_text(size=13,face="bold", colour = 'black'),
+        axis.ticks = element_line(size = 1.1),
+        legend.text=element_text(size=10,face="bold", colour = 'black'),
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.y = element_blank(),
+        panel.background=element_blank(),plot.background=element_blank()
+        )
+
+  # theme(panel.grid.major = element_blank()) +
+  # theme(panel.grid.minor = element_blank(),panel.background=element_blank(),plot.background=element_blank())
+
+
+# for git push, use this instead of using wflow_git_push()
+# git push -u origin master (in the Git app / in the working directory)
+
+# for making pdf file
+# library(rmarkdown)
+# render("analysis/~~.Rmd", "pdf_document")
+
+```
+
+
+```{r, echo=F}
+
+###### phyloseq microbiome package #######
+### 0. Data manipulation practice
+# otu_table(phy)
+# tax_table(phy)
+# meta(phy)  # same as this sample_data(phy)
+# psmelt #important
+# psmelt?? otu table?????? ?Ǵ? ???? ?ƴ϶?, phyloseq ??ü???? ?? ?ȴ?.
+# phyloseq_summary(phy)
+# phy.bac <- subset_taxa(phy, Phylum == "D_1__Chloroflexi")
+# sample_variables(phy)
+# sample_names(phy)
+# phy.subset <- subset_samples(phy, LargeScaleGeo == "CC")
+# f <- filter_taxa(phy, function(x) var(x) > 1e-05, TRUE)
+# s <- sample_sums(phy)
+# taxa_names(phy.PAB)  # get otus
+# ## Remove residual taxa that don??t have any sequences
+# sum(taxa_sums(phy.clean.20) == 0)
+# taxa_sums(phy.clean)
+# taxa_sums(phy.clean.20)
+# phy.clean.filt <- filter_taxa(phy.clean.20, function(x) sum(x) != 0, TRUE)
+# sample_sums
+# taxa_sums
+# m.map <-import_qiime_sample_data("merge_metadata.tsv")
+# SD = merge_samples(sample_data(GP), "SampleType")
+# transform_sample_counts()
+# ps3ra = transform_sample_counts(ps3, function(x){x / sum(x)})
+# phy.m <-  merge_samples(phy.clean.ss.5, "Label")
+# phy.clean.log2 <- transform_sample_counts(phy.clean.nolog, function(x){log2(1+x)})
+# phy.clean.log10 <- transform_sample_counts(phy.clean.nolog, function(x){log(1+x)})
+# df.node$label <- ifelse(grepl("^B",df.node$id),'Bacteria','Fungi')
+# rownames(df.phy.css.ss.5) <- phy.vec$OTU_id[match(rownames(df.phy.css.ss.5),phy.vec$OTU)]
+
+```
+
+
+## Import biom file
+```{r}
+
+### We can then load the biom file with phyloseq function import_biom. We extract the OTU table with OTU abundances and the taxonomy table from the resulting phyloseq object.
+bac_phylo=import_biom("data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged_unmerged/asv_table_final.biom")
+# bac_phylo=import_biom("data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged_unmerged_unmerged/asv_table_final.biom")
+
+### merge with metadata
+# Import sample metadata
+## in metadata erase # (This step is essential)
+map <- read.table(file = 'data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged_unmerged/sample_metadata_without_hashtag.tsv', sep = '\t', header = TRUE)
+map <- sample_data(map)
+
+head(map)
+dim(map)
+summary(map)
+str(map)
+
+summary(map)
+colnames(map)
+rownames(map)
+nrow(map)
+
+# Assign rownames to be Sample ID's
+map$SampleID
+rownames(map) <- map$SampleID
+rownames(map)
+dim(map)
+# Merge biom data object with sample metadata + tree data(this is rooted!)
+phy_tree = read_tree("data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged_unmerged/rooted_tree.nwk")
+phy <- merge_phyloseq(bac_phylo, map, phy_tree)
+
+class(phy)
+phy   ## 18304 otus
+
+## changing rank names
+colnames(tax_table(phy)) <- c("Kingdom", "Phylum", "Class",
+                              "Order", "Family", "Genus", "Species")
+
+sample_data(phy)
+phy
+
+lab <- c('Barneveld2_T0', 'Barneveld2_T9_H0', 'Barneveld2_T9_H0_CHL', 'Barneveld2_T9_OH10', 'Barneveld2_T9_OH10_CHL', 'LaBaghWoods1_T0', 'LaBaghWoods1_T9_H0', 'LaBaghWoods1_T9_H0_CHL', 'LaBaghWoods1_T9_OH8', 'LaBaghWoods1_T9_OH8_CHL', 'PMA_Barneveld2_T0', 'PMA_Barneveld2_T9_H0', 'PMA_Barneveld2_T9_H0_CHL', 'PMA_Barneveld2_T9_OH10', 'PMA_Barneveld2_T9_OH10_CHL', 'Negative', 'Positive')
+
+sample_data(phy)$Sample_name <- factor(sample_data(phy)$Sample_name, levels =lab)
+length(lab)
+
+# sample_data(phy)$SampleID <- factor(sample_data(phy)$SampleID , levels =target)
+
+
+phy  ## 6343 OTUs
+
+### Usable seq analysis (18. 10. 17)
+sample_names(phy)
+
+# 2.2. merge + unmerged & trimmed (after)
+# I'll divide the number by 2, if it is just forward or reverse reads
+df_phy <- psmelt(phy)
+df_phy$Abundance <- ifelse(grepl("forward|reverse",df_phy$SampleID), df_phy$Abundance / 2 ,df_phy$Abundance)
+head(df_phy)
+
+df_phy_abun <- df_phy %>% group_by(ReplicateID, Sample_name, Replicate) %>% summarise(Total=sum(Abundance))
+
+# plot usable reads
+df_phy_abun
+df_phy_abun$Replicate <- factor(df_phy_abun$Replicate)
+
+ggplot(df_phy_abun, aes(x=Sample_name, y=Total, fill=Replicate)) +  ## I put fill=value which was wrong
+  geom_bar(stat="identity", position = "dodge") +
+  # scale_fill_brewer(palette='Set2') +
+  xlab("Sample") +
+  ylab("Number of sequence reads \n") +
+  ggtitle("Sequence Depth per sample (merged + unmerged & adapter/primer rimmed)")+
+  mytheme_2d +
+  theme(axis.text.x = element_text(hjust = 1, vjust=0.95,angle=40,size=13,face="bold", colour = 'black'))
+
+l_rep <- c('Barneveld2_T0_R1', 'Barneveld2_T0_R2', 'Barneveld2_T0_R3', 'Barneveld2_T9_H0_R1', 'Barneveld2_T9_H0_R2', 'Barneveld2_T9_H0_R3', 'Barneveld2_T9_H0_CHL_R1', 'Barneveld2_T9_H0_CHL_R2', 'Barneveld2_T9_H0_CHL_R3', 'Barneveld2_T9_OH10_R1', 'Barneveld2_T9_OH10_R2', 'Barneveld2_T9_OH10_R3', 'Barneveld2_T9_OH10_CHL_R1', 'Barneveld2_T9_OH10_CHL_R2', 'Barneveld2_T9_OH10_CHL_R3', 'LaBaghWoods1_T0_R1', 'LaBaghWoods1_T0_R2', 'LaBaghWoods1_T0_R3', 'LaBaghWoods1_T9_H0_R1', 'LaBaghWoods1_T9_H0_R2', 'LaBaghWoods1_T9_H0_CHL_R1', 'LaBaghWoods1_T9_H0_CHL_R2', 'LaBaghWoods1_T9_OH8_R1', 'LaBaghWoods1_T9_OH8_R2', 'LaBaghWoods1_T9_OH8_CHL_R1', 'LaBaghWoods1_T9_OH8_CHL_R2', 'PMA_Barneveld2_T0_R1', 'PMA_Barneveld2_T0_R2', 'PMA_Barneveld2_T9_H0_R1', 'PMA_Barneveld2_T9_H0_R2', 'PMA_Barneveld2_T9_H0_CHL_R1', 'PMA_Barneveld2_T9_H0_CHL_R2', 'PMA_Barneveld2_T9_OH10_R1', 'PMA_Barneveld2_T9_OH10_R2', 'PMA_Barneveld2_T9_OH10_CHL_R1', 'PMA_Barneveld2_T9_OH10_CHL_R2', 'Negative_1', 'Negative_2', 'Positive')
+
+colnames(df_phy)
+df_phy_abun_sampleID <- df_phy %>% group_by(SampleID, ReplicateID, Read_type, Sample_name, Replicate) %>% summarise(Total=sum(Abundance))
+
+df_phy_abun_sampleID$ReplicateID <- factor(df_phy_abun_sampleID$ReplicateID, levels = l_rep)
+
+
+ggplot(df_phy_abun_sampleID, aes(x=ReplicateID, y=Total, fill = Read_type)) +  ## I put fill=value which was wrong
+  geom_bar(stat="identity", position = "dodge") +
+  # scale_fill_brewer(palette='Set2') +
+  xlab("Sample") +
+  ylab("Number of sequence reads \n") +
+  ggtitle("Sequence Depth per sample (merged + unmerged & adapter/primer rimmed)")+
+  mytheme_2d +
+  theme(axis.text.x = element_text(hjust = 1, vjust=0.95,angle=40,size=13,face="bold", colour = 'black'))
+
+```
+
+## filter negatives
+
+```{r}
+
+#### get unassigned vectors
+#### get CP and MT phyloseq obj and vectors
+# # (1) CP
+# phy.cp <- subset_taxa(phy, Class == "D_2__Chloroplast") ## just confirming 
+# phy.cp <- subset_taxa(phy, Order == "D_3__Chloroplast")
+# vec.cp <- rownames(otu_table(phy.cp))
+# length(rownames(otu_table(phy.cp))) ## 34 otus of CP
+# vec.cp
+# 
+# # (2) MT
+# # phy.mt <- subset_taxa(phy, Family == "D_4__Mitochondria")
+# phy.mt <- subset_taxa(phy, Order == "D_3__Rickettsiales")
+# vec.mt <- rownames(otu_table(phy.mt))
+# tax_table(phy.mt)
+# length(rownames(otu_table(phy.mt))) ## 78 otus of CP -> 66 after chimera filtering
+
+# Unassigned Kingdom level
+unique(tax_table(phy)[,'Kingdom']) ## only bacteria, then no need to exclude
+phy.un <- subset_taxa(phy, Kingdom == "Unassigned")
+vec.un <- rownames(otu_table(phy.un))
+tax_table(phy.un)
+length(rownames(otu_table(phy.un))) ##  1455 unassigned taxa
+
+### pop taxa application
+## get rid of CP and MT otus
+### pop_taxa function
+pop_taxa = function(physeq, badTaxa){
+  allTaxa = taxa_names(physeq)
+  myTaxa <- allTaxa[!(allTaxa %in% badTaxa)]
+  return(prune_taxa(myTaxa, physeq))
+}
+### let's do it!!!
+
+phy.clean <- pop_taxa(phy, c(vec.un))
+phy  ## 18304 
+sum(otu_table(phy)) # 2785575
+phy.clean ## 16849 
+sum(otu_table(phy.clean)) # 2781303 <- 2785575
+
+# Unassigned Phylum level
+phy.phylumNA <- subset_taxa(phy.clean, is.na(Phylum))
+vec.phylumNA <- rownames(otu_table(phy.phylumNA))
+tax_table(phy.phylumNA)
+length(rownames(otu_table(phy.phylumNA))) ##  1232 phylum-unassigned taxa
+sum(otu_table(phy.phylumNA))  # 15247
+
+phy.clean <- pop_taxa(phy.clean, c(vec.phylumNA))
+phy  ## 18304 
+phy.clean ## 15617 
+sum(otu_table(phy.clean)) # 2766056
+
+# checking procedure of whether the MT and CP otus are cleaned
+# taxa_names(subset_taxa(phy, Order == "D_3__Rickettsiales"))  # before 66
+# taxa_names(subset_taxa(phy, Order=="D_3__Chloroplast")) # before 34
+
+# taxa_names(subset_taxa(phy.clean , Order == "D_3__Rickettsiales")) # after 0
+# taxa_names(subset_taxa(phy.clean , Family=="D_4__Mitochondria")) # after 0
+# taxa_names(subset_taxa(phy.clean , Order == "D_3__Chloroplast")) # after 0
+# phy.clean good to go sir.
+
+
+#### We will also remove the "D_3__" patterns for cleaner labels
+# test success
+# tax_table(phy.two)[,colnames(tax_table(phy.two))] <- gsub(tax_table(phy.two)[,colnames(tax_table(phy.two))],pattern="[A-Z]_[0-9]__",replacement="")
+# phy.test4 <- phy.two %>% psmelt() 
+# phy.test4
+tax_table(phy.clean)[,colnames(tax_table(phy.clean))] <- gsub(tax_table(phy.clean)[,colnames(tax_table(phy.clean))],pattern="[A-Z]_[0-9]__",replacement="")
+
+#' sample_data(phy.clean)$SampleID <- factor(sample_data(phy.clean)$SampleID, levels =target_PAB)
+tax_table(phy.clean)
+
+## let's look at the negative samples
+phy.clean.otu <- otu_table(phy.clean)
+head(phy.clean.otu)
+df.clean.otu <- data.frame(phy.clean.otu)
+dim(df.clean.otu)
+df.clean.otu$total <- apply(df.clean.otu, 1, sum)
+head(df.clean.otu)
+df.clean.otu <- tibble::rownames_to_column(df.clean.otu, var = 'OTU')
+
+sample_names(phy.clean)
+# how about we delete major taxa in the negative sequence?
+negative <- df.clean.otu[,c('OTU',"SampleA53","SampleA53_unmerged_forward","SampleA53_unmerged_reverse", "SampleA65", "SampleA65_unmerged_forward", "SampleA65_unmerged_reverse")]
+negative
+negative$total <- apply(negative[,-1], 1, sum)
+negative_0 <- subset(negative, negative$total > 0) 
+neg.otu <- negative_0$OTU  ### 21 otu to be eliminated
+neg.otu
+length(neg.otu) # 92 strain
+tax_table(phy)[neg.otu]
+# library(xlsx)
+# write.xlsx(tax_table(phy)[neg.otu], 'neg.otu_taxonomy.xlsx')
+
+## checking 
+## exclude all negative taxa
+phy.clean.neg <- pop_taxa(phy.clean, negative_0$OTU)
+phy.clean.neg  ### 15525  otu <- 15617
+sum(otu_table(phy.clean.neg))  ### 2470491 <- 2766056
+
+## visualize how much negative strains were present in each sample
+
+df_phy
+
+df_phy.clean <- psmelt(phy.clean)
+colnames(df_phy.clean)
+df_phy.clean$Abundance <- ifelse(grepl("forward|reverse",df_phy.clean$SampleID), df_phy.clean$Abundance / 2 ,df_phy.clean$Abundance)
+head(df_phy.clean)
+
+df_phy.clean_neg <- df_phy.clean %>% group_by(SampleID) %>% subset(OTU %in% negative_0$OTU) %>% summarise(Negative_reads = sum(Abundance))
+df_phy.clean_abun <- df_phy.clean %>% group_by(SampleID, Sample_name, Replicate, ReplicateID, ReadID) %>% summarise(Total = sum(Abundance))
+df_phy.clean_abun <- df_phy.clean_abun %>% left_join(df_phy.clean_neg, by = c("SampleID"="SampleID"))
+df_phy.clean_abun %<>% mutate(Usable_reads = Total - Negative_reads)
+
+l_rep <- c('Barneveld2_T0_R1', 'Barneveld2_T0_R2', 'Barneveld2_T0_R3', 'Barneveld2_T9_H0_R1', 'Barneveld2_T9_H0_R2', 'Barneveld2_T9_H0_R3', 'Barneveld2_T9_H0_CHL_R1', 'Barneveld2_T9_H0_CHL_R2', 'Barneveld2_T9_H0_CHL_R3', 'Barneveld2_T9_OH10_R1', 'Barneveld2_T9_OH10_R2', 'Barneveld2_T9_OH10_R3', 'Barneveld2_T9_OH10_CHL_R1', 'Barneveld2_T9_OH10_CHL_R2', 'Barneveld2_T9_OH10_CHL_R3', 'LaBaghWoods1_T0_R1', 'LaBaghWoods1_T0_R2', 'LaBaghWoods1_T0_R3', 'LaBaghWoods1_T9_H0_R1', 'LaBaghWoods1_T9_H0_R2', 'LaBaghWoods1_T9_H0_CHL_R1', 'LaBaghWoods1_T9_H0_CHL_R2', 'LaBaghWoods1_T9_OH8_R1', 'LaBaghWoods1_T9_OH8_R2', 'LaBaghWoods1_T9_OH8_CHL_R1', 'LaBaghWoods1_T9_OH8_CHL_R2', 'PMA_Barneveld2_T0_R1', 'PMA_Barneveld2_T0_R2', 'PMA_Barneveld2_T9_H0_R1', 'PMA_Barneveld2_T9_H0_R2', 'PMA_Barneveld2_T9_H0_CHL_R1', 'PMA_Barneveld2_T9_H0_CHL_R2', 'PMA_Barneveld2_T9_OH10_R1', 'PMA_Barneveld2_T9_OH10_R2', 'PMA_Barneveld2_T9_OH10_CHL_R1', 'PMA_Barneveld2_T9_OH10_CHL_R2', 'Negative_1', 'Negative_2', 'Positive')
+
+l_read1 =c('Barneveld2_T0_R1_Paired', 'Barneveld2_T0_R1_Single_forward', 'Barneveld2_T0_R1_Single_reverse', 'Barneveld2_T0_R2_Paired', 'Barneveld2_T0_R2_Single_forward', 'Barneveld2_T0_R2_Single_reverse', 'Barneveld2_T0_R3_Paired', 'Barneveld2_T0_R3_Single_forward', 'Barneveld2_T0_R3_Single_reverse', 'Barneveld2_T9_H0_CHL_R1_Paired', 'Barneveld2_T9_H0_CHL_R1_Single_forward', 'Barneveld2_T9_H0_CHL_R1_Single_reverse', 'Barneveld2_T9_H0_CHL_R2_Paired', 'Barneveld2_T9_H0_CHL_R2_Single_forward', 'Barneveld2_T9_H0_CHL_R2_Single_reverse', 'Barneveld2_T9_H0_CHL_R3_Paired', 'Barneveld2_T9_H0_CHL_R3_Single_forward', 'Barneveld2_T9_H0_CHL_R3_Single_reverse', 'Barneveld2_T9_H0_R1_Paired', 'Barneveld2_T9_H0_R1_Single_forward', 'Barneveld2_T9_H0_R1_Single_reverse', 'Barneveld2_T9_H0_R2_Paired', 'Barneveld2_T9_H0_R2_Single_forward', 'Barneveld2_T9_H0_R2_Single_reverse', 'Barneveld2_T9_H0_R3_Paired', 'Barneveld2_T9_H0_R3_Single_forward', 'Barneveld2_T9_H0_R3_Single_reverse', 'Barneveld2_T9_OH10_CHL_R1_Paired', 'Barneveld2_T9_OH10_CHL_R1_Single_forward', 'Barneveld2_T9_OH10_CHL_R1_Single_reverse', 'Barneveld2_T9_OH10_CHL_R2_Paired', 'Barneveld2_T9_OH10_CHL_R2_Single_forward', 'Barneveld2_T9_OH10_CHL_R2_Single_reverse', 'Barneveld2_T9_OH10_CHL_R3_Paired', 'Barneveld2_T9_OH10_CHL_R3_Single_forward', 'Barneveld2_T9_OH10_CHL_R3_Single_reverse', 'Barneveld2_T9_OH10_R1_Paired', 'Barneveld2_T9_OH10_R1_Single_forward', 'Barneveld2_T9_OH10_R1_Single_reverse', 'Barneveld2_T9_OH10_R2_Paired', 'Barneveld2_T9_OH10_R2_Single_forward', 'Barneveld2_T9_OH10_R2_Single_reverse', 'Barneveld2_T9_OH10_R3_Paired', 'Barneveld2_T9_OH10_R3_Single_forward', 'Barneveld2_T9_OH10_R3_Single_reverse')
+
+l_read2 =c('LaBaghWoods1_T0_R1_Paired', 'LaBaghWoods1_T0_R1_Single_forward', 'LaBaghWoods1_T0_R1_Single_reverse', 'LaBaghWoods1_T0_R2_Paired', 'LaBaghWoods1_T0_R2_Single_forward', 'LaBaghWoods1_T0_R2_Single_reverse', 'LaBaghWoods1_T0_R3_Paired', 'LaBaghWoods1_T0_R3_Single_forward', 'LaBaghWoods1_T0_R3_Single_reverse', 'LaBaghWoods1_T9_H0_CHL_R1_Paired', 'LaBaghWoods1_T9_H0_CHL_R1_Single_forward', 'LaBaghWoods1_T9_H0_CHL_R1_Single_reverse', 'LaBaghWoods1_T9_H0_CHL_R2_Paired', 'LaBaghWoods1_T9_H0_CHL_R2_Single_forward', 'LaBaghWoods1_T9_H0_CHL_R2_Single_reverse', 'LaBaghWoods1_T9_H0_R1_Paired', 'LaBaghWoods1_T9_H0_R1_Single_forward', 'LaBaghWoods1_T9_H0_R1_Single_reverse', 'LaBaghWoods1_T9_H0_R2_Paired', 'LaBaghWoods1_T9_H0_R2_Single_forward', 'LaBaghWoods1_T9_H0_R2_Single_reverse', 'LaBaghWoods1_T9_OH8_CHL_R1_Paired', 'LaBaghWoods1_T9_OH8_CHL_R1_Single_forward', 'LaBaghWoods1_T9_OH8_CHL_R1_Single_reverse', 'LaBaghWoods1_T9_OH8_CHL_R2_Paired', 'LaBaghWoods1_T9_OH8_CHL_R2_Single_forward', 'LaBaghWoods1_T9_OH8_CHL_R2_Single_reverse', 'LaBaghWoods1_T9_OH8_R1_Paired', 'LaBaghWoods1_T9_OH8_R1_Single_forward', 'LaBaghWoods1_T9_OH8_R1_Single_reverse', 'LaBaghWoods1_T9_OH8_R2_Paired', 'LaBaghWoods1_T9_OH8_R2_Single_forward', 'LaBaghWoods1_T9_OH8_R2_Single_reverse')
+
+l_read3 = c('PMA_Barneveld2_T0_R1_Paired', 'PMA_Barneveld2_T0_R1_Single_forward', 'PMA_Barneveld2_T0_R1_Single_reverse', 'PMA_Barneveld2_T0_R2_Paired', 'PMA_Barneveld2_T0_R2_Single_forward', 'PMA_Barneveld2_T0_R2_Single_reverse', 'PMA_Barneveld2_T9_H0_CHL_R1_Paired', 'PMA_Barneveld2_T9_H0_CHL_R1_Single_forward', 'PMA_Barneveld2_T9_H0_CHL_R1_Single_reverse', 'PMA_Barneveld2_T9_H0_CHL_R2_Paired', 'PMA_Barneveld2_T9_H0_CHL_R2_Single_forward', 'PMA_Barneveld2_T9_H0_CHL_R2_Single_reverse', 'PMA_Barneveld2_T9_H0_R1_Paired', 'PMA_Barneveld2_T9_H0_R1_Single_forward', 'PMA_Barneveld2_T9_H0_R1_Single_reverse', 'PMA_Barneveld2_T9_H0_R2_Paired', 'PMA_Barneveld2_T9_H0_R2_Single_forward', 'PMA_Barneveld2_T9_H0_R2_Single_reverse', 'PMA_Barneveld2_T9_OH10_CHL_R1_Paired', 'PMA_Barneveld2_T9_OH10_CHL_R1_Single_forward', 'PMA_Barneveld2_T9_OH10_CHL_R1_Single_reverse', 'PMA_Barneveld2_T9_OH10_CHL_R2_Paired', 'PMA_Barneveld2_T9_OH10_CHL_R2_Single_forward', 'PMA_Barneveld2_T9_OH10_CHL_R2_Single_reverse', 'PMA_Barneveld2_T9_OH10_R1_Paired', 'PMA_Barneveld2_T9_OH10_R1_Single_forward', 'PMA_Barneveld2_T9_OH10_R1_Single_reverse', 'PMA_Barneveld2_T9_OH10_R2_Paired', 'PMA_Barneveld2_T9_OH10_R2_Single_forward', 'PMA_Barneveld2_T9_OH10_R2_Single_reverse', 'Negative_1_Paired', 'Negative_1_Single_forward', 'Negative_1_Single_reverse', 'Negative_2_Paired', 'Negative_2_Single_forward', 'Negative_2_Single_reverse', 'Positive_Paired', 'Positive_Single_forward', 'Positive_Single_reverse')
+
+l_read = c(l_read1, l_read2, l_read3)
+length(l_read)
+
+colnames(df_phy.clean_abun)
+df_melt_phy_clean <- melt(df_phy.clean_abun, id.vars = c("SampleID", 'Sample_name', "Replicate","ReplicateID", "ReadID","Total"), variable.name = "Usable") 
+
+
+
+df_melt_phy_clean$ReadID <- factor(df_melt_phy_clean$ReadID, levels = l_read)
+
+ggplot(df_melt_phy_clean, aes(x=ReadID, y=value, fill=Usable)) +  ## I put fill=value which was wrong
+  geom_bar(stat="identity") +
+  # scale_fill_brewer(palette='Set2') +
+  xlab("Sample") +
+  ylab("Number of sequence reads \n") +
+  ggtitle("Sequence Depth per sample (After removing Kingdom/Phylum unassigned asvs)")+
+  mytheme_2d +
+  theme(axis.text.x = element_text(hjust = 1, vjust=0.95,angle=40,size=13,face="bold", colour = 'black'))
+
+## remove negative samples
+l_noneg <- l_rep[!(l_rep %in% c("Negative_1","Negative_2"))]
+phy.clean.neg <- subset_samples(phy.clean.neg, ReplicateID %in% l_noneg)
+# 111 samples
+
+## subset samples
+# phy.clean.ss <- subset_samples(phy.clean, Label %in% lb)
+# (phy.clean.ss)
+# phy.clean.ss <- filter_taxa(phy.clean.ss, function(x) sum(x) != 0, TRUE)
+# phy.clean.ss  ## 393
+# sum(otu_table(phy.clean.ss)) # 1576881
+
+### remove otus with sequence length
+## what is the taxa? over 300
+# over300 = c('1866097706fa91e752c8664faf43449f', '1b2f92e822b1d78946e428e4a0cb3c0f', '3561ce5acea02d8722df1647ac04134e', '380c415e118a20e871a9212093b89dcd', '44acd89e2a099c5838d390e7fd811fb4', '7142aab19a3913224dca238c45100219', '8227de12305c6fafbcf0aeb2c7ac0a35', 'ABRL02000548.13901.15510', 'ADWL01006363.13909.15531', 'CBQP010013872.5787.7604', 'LONC01000611.65580.67188', 'MTTA01000002.173539804.173541537', 'a3aa1c5831dbdac10601b422bf713873', 'ac88961e75ff2a36681aa818ef9cc4ee', 'bb35191255f4429dad23dad82575ea78', 'd77161ae99e2715c32f077131af656ea', 'df3998cea8301598580b90cd0e0a37b6', 'e00a18e93f328393803417e3be829423', 'e74c4dd0d5f55cbba155bd31da7b7f4e', 'f248cd73405b872671c04e6bec3a530e')
+# 
+# tax.over300 <-  tax_table(phy)[over300]
+# tax.over300 <- data.frame(tax.over300)
+# is.na(tax.over300$Order)
+# tax.over300$Order
+# phy.clean.ss <- pop_taxa(phy.clean.ss, over300 )
+# phy.clean.ss  ## 390
+# sum(otu_table(phy.clean)) # 1580210
+
+otu_table(phy.clean.neg)[,grepl("forward|reverse",colnames(otu_table(phy.clean.neg)))] <- otu_table(phy.clean.neg)[,grepl("forward|reverse",colnames(otu_table(phy.clean.neg)))] / 2
+
+## exclude taxa less than 5 sequences
+phy.clean.neg
+
+otu_table(phy.clean.neg) %>% rowSums() %>% sort()
+
+v.less5 <- rownames(otu_table(phy.clean.neg)[otu_table(phy.clean.neg) %>% rowSums() < 5])
+v.less10 <- rownames(otu_table(phy.clean.neg)[otu_table(phy.clean.neg) %>% rowSums() < 10])
+v.less20 <- rownames(otu_table(phy.clean.neg)[otu_table(phy.clean.neg) %>% rowSums() < 20])
+v.less30 <- rownames(otu_table(phy.clean.neg)[otu_table(phy.clean.neg) %>% rowSums() < 30])
+v.less40 <- rownames(otu_table(phy.clean.neg)[otu_table(phy.clean.neg) %>% rowSums() < 40])
+v.less50 <- rownames(otu_table(phy.clean.neg)[otu_table(phy.clean.neg) %>% rowSums() < 50])
+
+length(v.less5)   ## 6266
+length(v.less10)  ## 8836
+length(v.less20)  ## 10806
+length(v.less30)  ## 11697
+length(v.less40)  ## 12250
+length(v.less50)  ## 12622
+
+## execute
+phy  ##  18304
+phy.clean.neg ## 15525 negative, unassigned taxa (kingdom, phylum) removed.
+(phy.clean.neg.5 <- pop_taxa(phy.clean.neg, v.less5))   # 9259  
+(phy.clean.neg.10 <- pop_taxa(phy.clean.neg, v.less10)) # 6689  
+(phy.clean.neg.20 <- pop_taxa(phy.clean.neg, v.less20)) # 4719  
+(phy.clean.neg.30 <- pop_taxa(phy.clean.neg, v.less30)) # 3828    
+(phy.clean.neg.40 <- pop_taxa(phy.clean.neg, v.less40)) # 3275  
+(phy.clean.neg.50 <- pop_taxa(phy.clean.neg, v.less50)) # 2903  
+
+sum(otu_table(phy)) ## 2785575 otu reads.
+sum(otu_table(phy.clean)) ## 2766056
+sum(otu_table(phy.clean.neg)) ## 1316871  # divided forward, reverse reads' otu count by 2
+sum(otu_table(phy.clean.neg.5)) ## 1301328
+sum(otu_table(phy.clean.neg.10)) ## 1283808
+sum(otu_table(phy.clean.neg.20)) ## 1256461
+
+```
+
+## Just checking: is forward and reverse single reads give similar asvs? or completely different?
+
+```{r}
+sample_data(phy.clean.neg)
+
+phy.clean.neg.B2T0R1 <- subset_samples(phy.clean.neg, ReadID %in% c("Barneveld2_T0_R1_Single_forward","Barneveld2_T0_R1_Single_reverse"))
+
+taxa_names(phy.clean.neg.B2T0R1) <- paste0("asv", sprintf("%05d", 1:length(taxa_names(phy.clean.neg.B2T0R1))))
+
+df.clean.neg.B2T0R1 <- psmelt(phy.clean.neg.B2T0R1)
+# we need to group by samples
+df.B2T0R1.rel <- df.clean.neg.B2T0R1 %>%  
+  group_by(ReadID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+
+df.B2T0R1.rel[df.B2T0R1.rel$RelAbundance < 0.2,]$OTU <- 'Low abundance'
+
+### let's test
+ord <- df.B2T0R1.rel %>% group_by(OTU) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- ord$OTU
+length(vec)
+
+# rev(tail(vec,10))
+# vec
+# write.table(vec,'vec.txt', quote=FALSE, sep='\t', row.names = F, col.names = F)
+
+df.B2T0R1.rel$OTU <- factor(df.B2T0R1.rel$OTU, levels = vec)
+
+df.B2T0R1.rel$OTU
+
+## 2. plot relative abundance
+ggplot(df.B2T0R1.rel, aes(x=ReadID, y = RelAbundance, fill = OTU)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="NA") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_300) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%)\n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(nrow = 6,reverse = T))+
+  theme(legend.position="none") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=12, angle = 50, hjust = 1, vjust=1.1, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+
+
+
+
+## include the paired sample
+phy.clean.neg.B2T0R1 <- subset_samples(phy.clean.neg, ReplicateID == "Barneveld2_T0_R1")
+
+taxa_names(phy.clean.neg.B2T0R1) <- paste0("asv", sprintf("%05d", 1:length(taxa_names(phy.clean.neg.B2T0R1))))
+
+df.clean.neg.B2T0R1 <- psmelt(phy.clean.neg.B2T0R1)
+# we need to group by samples
+df.B2T0R1.rel <- df.clean.neg.B2T0R1 %>%  
+  group_by(ReadID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+
+df.B2T0R1.rel[df.B2T0R1.rel$RelAbundance < 0.2,]$OTU <- 'Low abundance'
+
+### let's test
+ord <- df.B2T0R1.rel %>% group_by(OTU) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- ord$OTU
+length(vec)
+
+# rev(tail(vec,10))
+# vec
+# write.table(vec,'vec.txt', quote=FALSE, sep='\t', row.names = F, col.names = F)
+
+df.B2T0R1.rel$OTU <- factor(df.B2T0R1.rel$OTU, levels = vec)
+
+df.B2T0R1.rel$OTU
+
+## 2. plot relative abundance
+ggplot(df.B2T0R1.rel, aes(x=ReadID, y = RelAbundance, fill = OTU)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="NA") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_300) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%)\n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(nrow = 6,reverse = T))+
+  theme(legend.position="none") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=12, angle = 50, hjust = 1, vjust=1.1, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+
+
+
+## Venn diagram
+venn_each_sample_read_type <- function(phy_otu.clean.neg.10){
+  library(VennDiagram)
+  df_subset <- psmelt(phy_otu.clean.neg.10) %>%  select(OTU, Sample, Replicate, Abundance, ReadID, Read_type) %>% group_by(ReadID) %>%  filter(Abundance > 0) %>% arrange(ReadID)
+  df_otu_1 <- df_subset %>% filter(Read_type == "Paired") %>% select(OTU) %>% unique()
+  vec.f <- df_otu_1$OTU
+  df_otu_2 <- df_subset %>% filter(Read_type == "Single_forward") %>% select(OTU) %>% unique()
+  vec.s <- df_otu_2$OTU
+  df_otu_3 <- df_subset %>% filter(Read_type == "Single_reverse") %>% select(OTU) %>% unique()
+  vec.t <- df_otu_3$OTU
+  n12 <- intersect(vec.f,vec.s)
+  n23 <- intersect(vec.s,vec.t)
+  n13 <- intersect(vec.f,vec.t)
+  n123 <- intersect(intersect(vec.f,vec.s),vec.t)
+  
+  my.list <- list(first = vec.f,second = vec.s, third=vec.t, n12=n12, n23=n23,n13=n13,n123=n123)
+  my.list
+  draw.triple.venn(area1 = length(my.list$first),
+                   area2 = length(my.list$second),
+                   area3 = length(my.list$third),
+                   n12 = length(my.list$n12),
+                   n23 = length(my.list$n23),
+                   n13 = length(my.list$n13),
+                   n123 = length(my.list$n123),
+                   #category = c("first","second",'third'),
+                   fill = c("#FE9696",'#96FE96',"#9696FE"),
+                   euler.d = F,
+                   scaled = F,
+                   ext.text = T,
+                   ext.percent = c(0.1,0.1,0.1),
+                   ext.length = 1,
+                   label.col = rep("gray10",7),
+                   lwd = 0,
+                   cex = 1,
+                   fontface = rep("plain",7),
+                   fontfamily = rep("sans",7), 
+                   # cat.cex = 1.5,
+                   # cat.fontface = rep("bold",3),
+                   # cat.fontfamily = rep("sans",3),
+                   # #cat.pos = c(0, 0,0),
+                   print.mode = c("percent","raw")
+  )
+}
+
+
+gTree(children=venn_each_sample_read_type(phy.clean.neg.B2T0R1))
+
+```
+
+
+
+## plot relative abundance plot
+
+```{r}
+## average or sum replicates
+# phy.m <-  merge_samples(phy.clean.neg, "Sample_name")
+# tax_table(phy.m)
+
+# we are going to plot replicates
+l_rep <- c('Barneveld2_T0_R1', 'Barneveld2_T0_R2', 'Barneveld2_T0_R3', 'Barneveld2_T9_H0_R1', 'Barneveld2_T9_H0_R2', 'Barneveld2_T9_H0_R3', 'Barneveld2_T9_H0_CHL_R1', 'Barneveld2_T9_H0_CHL_R2', 'Barneveld2_T9_H0_CHL_R3', 'Barneveld2_T9_OH10_R1', 'Barneveld2_T9_OH10_R2', 'Barneveld2_T9_OH10_R3', 'Barneveld2_T9_OH10_CHL_R1', 'Barneveld2_T9_OH10_CHL_R2', 'Barneveld2_T9_OH10_CHL_R3', 'LaBaghWoods1_T0_R1', 'LaBaghWoods1_T0_R2', 'LaBaghWoods1_T0_R3', 'LaBaghWoods1_T9_H0_R1', 'LaBaghWoods1_T9_H0_R2', 'LaBaghWoods1_T9_H0_CHL_R1', 'LaBaghWoods1_T9_H0_CHL_R2', 'LaBaghWoods1_T9_OH8_R1', 'LaBaghWoods1_T9_OH8_R2', 'LaBaghWoods1_T9_OH8_CHL_R1', 'LaBaghWoods1_T9_OH8_CHL_R2', 'PMA_Barneveld2_T0_R1', 'PMA_Barneveld2_T0_R2', 'PMA_Barneveld2_T9_H0_R1', 'PMA_Barneveld2_T9_H0_R2', 'PMA_Barneveld2_T9_H0_CHL_R1', 'PMA_Barneveld2_T9_H0_CHL_R2', 'PMA_Barneveld2_T9_OH10_R1', 'PMA_Barneveld2_T9_OH10_R2', 'PMA_Barneveld2_T9_OH10_CHL_R1', 'PMA_Barneveld2_T9_OH10_CHL_R2', 'Positive')
+
+## let's get phylum sir
+df.phylum <- phy.clean.neg %>%
+  tax_glom(taxrank = "Phylum", NArm = FALSE) %>% 
+  psmelt()
+
+df.phylum
+# df.phylum$ReplicateID <- factor(df.phylum$ReplicateID, levels = l_rep)
+
+library(forcats) 
+df.phylum %<>% mutate(Phylum = fct_explicit_na(Phylum, na_level = "unidentified"))
+unique(df.phylum$Phylum)
+
+levels(df.phylum$Phylum)
+levels(df.phylum$Phylum) = c(levels(df.phylum$Phylum), 'Low abundance')
+
+# we need to group by samples
+df.phylum.rel <- df.phylum %>%  
+  group_by(ReadID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+
+# df.phylum.rel[df.phylum.rel$RelAbundance < 5,]$Phylum <- 'Low abundance'
+
+### let's test
+ord <- df.phylum.rel %>% group_by(Phylum) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- ord$Phylum
+rev(tail(vec,10))
+df.phylum.rel$Phylum <- factor(df.phylum.rel$Phylum, levels = vec)
+
+## relative abundance with less than 0.5% in sample was labeled 'low abundance'
+## plot relative abundance
+ggplot(df.phylum.rel, aes(x=ReadID, y = RelAbundance, fill = Phylum)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="black") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%) \n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(ncol = 9,reverse = T))+
+  theme(legend.position="bottom") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=9, angle = 70, hjust = 1.1, vjust=1.09, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+
+## plot by ReplicateID
+# we need to group by samples
+df.phylum <- phy.clean.neg %>%
+  tax_glom(taxrank = "Phylum", NArm = FALSE) %>% 
+  psmelt()
+df.phylum
+# df.phylum$ReplicateID <- factor(df.phylum$ReplicateID, levels = l_rep)
+library(forcats) 
+df.phylum %<>% mutate(Phylum = fct_explicit_na(Phylum, na_level = "unidentified"))
+unique(df.phylum$Phylum)
+levels(df.phylum$Phylum)
+levels(df.phylum$Phylum) = c(levels(df.phylum$Phylum), 'Low abundance')
+df.phylum.rel <- df.phylum %>%  
+  group_by(ReplicateID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+# df.phylum.rel[df.phylum.rel$RelAbundance < 5,]$Phylum <- 'Low abundance'
+### let's test
+ord <- df.phylum.rel %>% group_by(Phylum) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- ord$Phylum
+rev(tail(vec,10))
+df.phylum.rel$Phylum <- factor(df.phylum.rel$Phylum, levels = vec)
+# plot relative abundance
+ggplot(df.phylum.rel, aes(x=ReplicateID, y = RelAbundance, fill = Phylum)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="black") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%) \n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(ncol = 9,reverse = T))+
+  theme(legend.position="bottom") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=12, angle = 50, hjust = 1, vjust=1.1, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+# (Once more without boundary) plot relative abundance
+ggplot(df.phylum.rel, aes(x=ReplicateID, y = RelAbundance, fill = Phylum)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="NA") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%) \n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(ncol = 9,reverse = T))+
+  theme(legend.position="bottom") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=12, angle = 50, hjust = 1, vjust=1.1, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+
+
+##### now class
+## let's get class sir
+df.class <- phy.clean.neg %>%
+  tax_glom(taxrank = "Class", NArm = FALSE) %>% 
+  psmelt()
+# df.class$ReplicateID <- factor(df.class$ReplicateID, levels = l_rep)
+
+library(forcats) 
+df.class %<>% mutate(Class = fct_explicit_na(Class, na_level = "unidentified"))
+unique(df.class$Class)
+
+levels(df.class$Class)
+levels(df.class$Class) = c(levels(df.class$Class), 'Low abundance')
+
+# we need to group by samples
+df.class.rel <- df.class %>%  
+  group_by(ReadID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+
+df.class.rel[df.class.rel$RelAbundance < 0.5,]$Class <- 'Low abundance'
+
+### let's test
+ord <- df.class.rel %>% group_by(Class) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- ord$Class
+df.class.rel$Class <- factor(df.class.rel$Class, levels = vec)
+
+## 2. plot relative abundance
+ggplot(df.class.rel, aes(x=ReadID, y = RelAbundance, fill = Class)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="black") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%)\n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(ncol = 9,reverse = T))+
+  theme(legend.position="bottom") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=9, angle = 70, hjust = 1.1, vjust=1.09, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+
+# we need to group by samples
+df.class.rel <- df.class %>%  
+  group_by(ReplicateID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+
+df.class.rel[df.class.rel$RelAbundance < 0.5,]$Class <- 'Low abundance'
+
+### let's test
+ord <- df.class.rel %>% group_by(Class) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- ord$Class
+df.class.rel$Class <- factor(df.class.rel$Class, levels = vec)
+
+# plot relative abundance
+ggplot(df.class.rel, aes(x=ReplicateID, y = RelAbundance, fill = Class)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="NA") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%) \n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(ncol = 9,reverse = T))+
+  theme(legend.position="bottom") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=12, angle = 50, hjust = 1, vjust=1.1, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+
+
+
+##### now Order
+
+df.order <- phy.clean.neg %>%
+  tax_glom(taxrank = "Order", NArm = FALSE) %>% 
+  psmelt()
+# df.order$ReplicateID <- factor(df.order$ReplicateID, levels = l_rep)
+
+library(forcats) 
+df.order %<>% mutate(Order = fct_explicit_na(Order, na_level = "unidentified"))
+unique(df.order$Order)
+
+levels(df.order$Order) = c(levels(df.order$Order), 'Low abundance')
+
+# we need to group by samples
+df.order.rel <- df.order %>%  
+  group_by(ReadID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+
+df.order.rel[df.order.rel$RelAbundance < 0.5,]$Order <- 'Low abundance'
+
+### let's test
+ord <- df.order.rel %>% group_by(Order) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- ord$Order
+df.order.rel$Order <- factor(df.order.rel$Order, levels = vec)
+length(vec)
+## 2. plot relative abundance
+ggplot(df.order.rel, aes(x=ReadID, y = RelAbundance, fill = Order)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="black") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection2) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%)\n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(ncol = 8,reverse = T))+
+  theme(legend.position="bottom") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=9, angle = 70, hjust = 1.1, vjust=1.09, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+# we need to group by samples
+df.order.rel <- df.order %>%  
+  group_by(ReplicateID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+
+df.order.rel[df.order.rel$RelAbundance < 0.5,]$Order <- 'Low abundance'
+### let's test
+ord <- df.order.rel %>% group_by(Order) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- ord$Order
+df.order.rel$Order <- factor(df.order.rel$Order, levels = vec)
+length(vec)
+# plot relative abundance
+ggplot(df.order.rel, aes(x=ReplicateID, y = RelAbundance, fill = Order)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="NA") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%) \n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(ncol = 7,reverse = T))+
+  theme(legend.position="bottom") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=12, angle = 50, hjust = 1, vjust=1.1, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+
+
+
+##### now family
+df.family <- phy.clean.neg %>%
+  tax_glom(taxrank = "Family", NArm = FALSE) %>% 
+  psmelt()
+# df.family$ReplicateID <- factor(df.family$ReplicateID, levels = l_rep)
+
+library(forcats) 
+df.family %<>% mutate(Family = fct_explicit_na(Family, na_level = "unidentified"))
+unique(df.family$Family)
+
+levels(df.family$Family) = c(levels(df.family$Family), 'Low abundance')
+
+# we need to group by samples
+df.family.rel <- df.family %>%  
+  group_by(ReadID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+
+df.family.rel[df.family.rel$RelAbundance < 0.3,]$Family <- 'Low abundance'
+### let's test
+ord <- df.family.rel %>% group_by(Family) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- ord$Family
+length(vec)
+df.family.rel$Family <- factor(df.family.rel$Family, levels = vec)
+
+## 2. plot relative abundance
+ggplot(df.family.rel, aes(x=ReadID, y = RelAbundance, fill = Family)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="black") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection2) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%)\n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(ncol = 8,reverse = T))+
+  theme(legend.position="bottom") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=9, angle = 70, hjust = 1.1, vjust=1.09, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+# we need to group by samples
+df.family.rel <- df.family %>%  
+  group_by(ReplicateID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+
+df.family.rel[df.family.rel$RelAbundance < 0.3,]$Family <- 'Low abundance'
+### let's test
+ord <- df.family.rel %>% group_by(Family) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- ord$Family
+length(vec)
+df.family.rel$Family <- factor(df.family.rel$Family, levels = vec)
+
+## 2. plot relative abundance
+ggplot(df.family.rel, aes(x=ReplicateID, y = RelAbundance, fill = Family)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="NA") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection2) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%)\n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(ncol = 7,reverse = T))+
+  theme(legend.position="bottom") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=12, angle = 50, hjust = 1, vjust=1, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+
+
+##### now Genus
+### let's get phylum sir
+# prune out phyla below 2% in each sample
+df.genus <- phy.clean.neg %>%
+  tax_glom(taxrank = "Genus", NArm = FALSE) %>% 
+  psmelt()
+# df.genus$ReplicateID <- factor(df.genus$ReplicateID, levels = l_rep)
+
+# library(dplyr)
+# library(forcats) 
+# library(magrittr)
+df.genus %<>% mutate(Genus = fct_explicit_na(Genus, na_level = "unidentified"))
+unique(df.genus$Genus)
+
+levels(df.genus$Genus) = c(levels(df.genus$Genus), 'Low abundance')
+
+# we need to group by samples
+df.genus.rel <- df.genus %>%  
+  group_by(ReadID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+
+df.genus.rel[df.genus.rel$RelAbundance < 0.3,]$Genus <- 'Low abundance'
+
+### let's test
+
+gen.ord <- df.genus.rel %>% group_by(Genus) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- gen.ord$Genus
+length(vec)
+# rev(tail(vec.gen,10))
+# vec.gen
+# write.xlsx(rev(vec.gen), 'bacteria_genus_list.xlsx')
+
+# let's make list of genus starting from kingdom
+df.genus.rel$Genus <- factor(df.genus.rel$Genus, levels = vec)
+
+genus_color <- c(
+  'gray','black',"#F92A82", "#ED7B84", "#7EB77F", 
+  "#DEC4A1", "#E5D1D0", '#0E8482', '#C9DAEA', '#337357', 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  
+  '#7ac864', '#ff7473', '#00e2ff', '#8836ff', '#732b90',
+  '#e72fff', '#006eff', '#e7eb1c','#00ffe0','#ffc680',
+  '#ABD0BC','#519eff', '#ffaa00','#00a300','#b23b00',
+  '#ecb0e7','#ff5a00' ,'#8ee7e7'
+)
+## 2. plot relative abundance
+ggplot(df.genus.rel, aes(x=ReadID, y = RelAbundance, fill = Genus)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="black") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_300) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%)\n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(ncol = 7,reverse = T))+
+  theme(legend.position="bottom") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=9, angle = 70, hjust = 1.1, vjust=1.09, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+# we need to group by samples
+df.genus.rel <- df.genus %>%  
+  group_by(ReplicateID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+
+df.genus.rel[df.genus.rel$RelAbundance < 0.3,]$Genus <- 'Low abundance'
+gen.ord <- df.genus.rel %>% group_by(Genus) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- gen.ord$Genus
+length(vec)
+df.genus.rel$Genus <- factor(df.genus.rel$Genus, levels = vec)
+## 2. plot relative abundance
+ggplot(df.genus.rel, aes(x=ReplicateID, y = RelAbundance, fill = Genus)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="NA") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection2) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%)\n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  mytheme_2d+
+  guides(fill = guide_legend(ncol = 7,reverse = T))+
+  theme(legend.position="bottom") +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=12, angle = 50, hjust = 1, vjust=1.1, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  scale_y_continuous(breaks=seq(0,100,10))+
+  scale_x_discrete(expand = c(0, 0)) +
+  theme(panel.grid.major = element_blank()) +
+  theme(panel.grid.minor = element_blank(), panel.background=element_blank(),panel.border=element_blank(), plot.background=element_blank())
+
+
+# plot only the positive
+df.genus.rel.positive = df.genus.rel %>% filter(ReplicateID == "Positive")
+
+ggplot(df.genus.rel.positive, aes(x=ReplicateID, y = RelAbundance, fill = Genus)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="NA") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection2) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%)\n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  guides(fill = guide_legend(ncol = 2,reverse = T)) +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=12, angle = 50, hjust = 1, vjust=1.1, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  mytheme_2d +
+  theme(legend.position="bottom")
+
+# plot only the positive - plot all readID
+df.genus.rel <- df.genus %>%  
+  group_by(ReadID) %>%                         # Filter out at absolute read of 20       
+  mutate(RelAbundance = Abundance*100/sum(Abundance))  # Transform to rel. abundance
+df.genus.rel[df.genus.rel$RelAbundance < 0.3,]$Genus <- 'Low abundance'
+gen.ord <- df.genus.rel %>% group_by(Genus) %>% summarise(Abundance = sum(Abundance)) %>% arrange(Abundance)
+vec <- gen.ord$Genus
+length(vec)
+df.genus.rel$Genus <- factor(df.genus.rel$Genus, levels = vec)
+df.genus.rel.positive <- df.genus.rel %>% filter(ReplicateID == "Positive")
+
+ggplot(df.genus.rel.positive, aes(x=ReadID, y = RelAbundance, fill = Genus)) + 
+  geom_bar(stat="identity", width = 0.8, position = 'stack', colour="black") +
+  #scale_fill_discrete() +
+  scale_fill_manual(values = my_color_collection2) +
+  
+  xlab('')+
+  ylab("Relative Abundance (%)\n") +
+  #ggtitle("Phylum Community Composition by Sample \n") +
+  ## adjust positions
+  guides(fill = guide_legend(ncol = 2,reverse = T)) +
+  theme(plot.title = element_text(size = 20,hjust = 0.5, face='bold')) + 
+  theme(axis.title.x = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.title.y = element_text(size = 15,hjust = 0.5, face='bold')) + 
+  theme(axis.text.x = element_text(size=12, angle = 50, hjust = 1, vjust=1.1, face='bold',color='black'), axis.ticks.x=element_blank())+
+  theme(axis.text.y = element_text(size=15, face='bold',color='black'))+
+  mytheme_2d +
+  theme(legend.position="bottom")
+
+
+
+```
+
+
+## Plot ASV rank abundance
+
+```{r}
+## convert OTU table into relative abundance
+# how about using phy.clean.neg.10
+otu_rel <- otu_table(phy.clean.neg.10) # remove asv that has less than 10 reads total.
+class(otu_rel)
+
+hist(rowSums(otu_rel), breaks = 60)
+table(rowSums(otu_rel))
+sort(rowSums(otu_rel)) %>% tail()
+
+mat_rel <- apply(otu_rel,2, function(x) x/sum(x))
+dim(mat_rel) # 1903 asv
+colSums(mat_rel)
+
+## Reorder the rows and change rownames
+sort(rowSums(otu_rel), decreasing = T)
+names(sort(rowSums(otu_rel), decreasing = T))
+
+mat_rel2 <- mat_rel[names(sort(rowSums(otu_rel), decreasing = T)),,drop=F]
+rownames(mat_rel2) <- paste0("asv", sprintf("%04d", 1:dim(mat_rel2)[1]))
+
+mat_rel2
+colSums(mat_rel2)
+dim(mat_rel2)
+
+any(duplicated(rownames(mat_rel2)))
+
+## rank matrix per column
+library(matrixStats)
+
+## how to calculate ranks
+x <- cbind(a=c(11,22,44),
+       b=c(21,12,NA),
+       c=c(35,66,12))
+x
+# apply(x, 2, rank)
+apply(-x, 2, rank)
+
+# make 0 NA
+any(is.na(mat_rel2)) # no NA in the data
+mat_rel2[mat_rel2 == 0] <- NA
+dim(mat_rel2)
+sum(is.na(mat_rel2)) # 67553 NAs
+
+mat_rank <- apply(-mat_rel2, 2, rank)
+any(is.na(mat_rank)) # there should be NA
+dim(mat_rank)
+# change back to NA, which are supposed to be NA
+mat_rank[is.na(mat_rel2)] <- NA
+any(is.na(mat_rank))
+sum(is.na(mat_rank)) # 34987 NAs
+
+colMaxs(mat_rank, na.rm =T)
+colMins(mat_rank, na.rm =T)
+
+mat_rank[,1]
+table(mat_rank[,1])
+table(mat_rank[,2])
+table(mat_rank[,3])
+table(mat_rank[,4]) %>% tail()
+
+mat_rank
+
+## plot rank
+sub_mat_rank <- mat_rank[,1:2]
+mlt_rank <- melt(sub_mat_rank)
+colnames(mlt_rank) <- c("ASV", "Sample", "Rank")
+head(mlt_rank)
+class(mlt_rank)
+
+any(duplicated(rownames(mlt_rank)))
+
+## get the rank abundance aligned to SampleA1
+vec_asv_sampleA1 <- mlt_rank %>% filter(Sample == "SampleA1") %>% arrange(Rank) %>% select(ASV)
+head(vec_asv_sampleA1)
+vec_asv_sampleA1 <- vec_asv_sampleA1[,1]
+mlt_rank$ASV <- factor(mlt_rank$ASV, levels = vec_asv_sampleA1)
+
+ggplot(mlt_rank, aes(x = ASV, y = Rank)) +
+  geom_line(aes(col=Sample)) +
+  geom_point(aes(col=Sample)) +
+  ylab("Rank \n") +
+  xlab(paste0("\n ASV ID")) +
+  mytheme_2d +
+  theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+  # scale_y_continuous(expand = c(0, 0))
+
+## Okay this is a good demonstration of the data
+
+
+```
+
+## Let's coarse-grain to Family level to see if there is a difference
+
+```{r}
+## group by Family level
+phy.clean.neg.10 # 6689 ASV
+
+psmelt_family <- psmelt(phy.clean.neg.10)
+df_family <- psmelt_family %>% group_by(Sample, Sample_name, ReplicateID, Replicate, Family) %>% summarize(Abundance = sum(Abundance))
+
+# 37 samples total
+df_family$ReplicateID %>% unique()
+length(df_family[is.na(df_family)])
+
+## draw venn diagram
+venn_each_sample_family <- function(phy.clean.neg.10){
+  library(VennDiagram)
+  df_subset <- psmelt(phy.clean.neg.10) %>%  select(Family, Sample, Replicate, Abundance) %>% group_by(Sample) %>%  filter(Abundance > 0) %>% arrange(Sample)
+  df_Family_1 <- df_subset %>% filter(Replicate == 1) %>% select(Family) %>% unique()
+  vec.f <- df_Family_1$Family
+  df_Family_2 <- df_subset %>% filter(Replicate == 2) %>% select(Family) %>% unique()
+  vec.s <- df_Family_2$Family
+  df_Family_3 <- df_subset %>% filter(Replicate == 3) %>% select(Family) %>% unique()
+  vec.t <- df_Family_3$Family
+  n12 <- intersect(vec.f,vec.s)
+  n23 <- intersect(vec.s,vec.t)
+  n13 <- intersect(vec.f,vec.t)
+  n123 <- intersect(intersect(vec.f,vec.s),vec.t)
+  
+  my.list <- list(first = vec.f,second = vec.s, third=vec.t, n12=n12, n23=n23,n13=n13,n123=n123)
+  my.list
+  draw.triple.venn(area1 = length(my.list$first),
+                   area2 = length(my.list$second),
+                   area3 = length(my.list$third),
+                   n12 = length(my.list$n12),
+                   n23 = length(my.list$n23),
+                   n13 = length(my.list$n13),
+                   n123 = length(my.list$n123),
+                   #category = c("first","second",'third'),
+                   fill = c("#FE9696",'#96FE96',"#9696FE"),
+                   euler.d = F,
+                   scaled = F,
+                   ext.text = T,
+                   ext.percent = c(0.1,0.1,0.1),
+                   ext.length = 1,
+                   label.col = rep("gray10",7),
+                   lwd = 0,
+                   cex = 1,
+                   fontface = rep("plain",7),
+                   fontfamily = rep("sans",7), 
+                   # cat.cex = 1.5,
+                   # cat.fontface = rep("bold",3),
+                   # cat.fontfamily = rep("sans",3),
+                   # #cat.pos = c(0, 0,0),
+                   print.mode = c("percent","raw")
+  )
+}
+
+
+l_venn_family <- list()
+for (i in 1:length(l_sample_names)){
+  print(i)
+  j <- l_sample_names[i]
+  phy.ss1 <- subset_samples(phy.clean.neg.10, Sample_name == j)
+  l_venn_family[[i]] <- grid.arrange(gTree(children=venn_each_sample_family(phy.ss1)), top = paste0(j))
+}
+length(l_venn_family)
+
+grid.arrange(grobs = l_venn_family, ncol=5)
+
+
+## Let's look at rank abundance
+df_family <- psmelt(phy.clean.neg.10) %>% group_by(ReplicateID, Family) %>% summarize(Abundance = sum(Abundance))
+
+mat_family <- df_family %>% pivot_wider(names_from = ReplicateID, values_from = Abundance)
+mat_family %>% tail()
+dim(mat_family)
+
+# I've decided to remove NA (unidentified), because it does not mean anything even if the relative abundance of unidentified is similar between samples.
+mat_family <-na.omit(mat_family)
+dim(mat_family)
+mat_family <- tibble::column_to_rownames(mat_family, var = "Family")
+
+mat_rel <- apply(mat_family,2, function(x) x/sum(x))
+dim(mat_rel) # 305 family
+
+colSums(mat_rel)
+
+## Reorder the rows and change rownames
+mat_rel2 <- mat_rel[names(sort(rowSums(mat_rel), decreasing = T)),,drop=F]
+
+# construct dataframe
+
+rownames(mat_rel2) <- paste0("family", sprintf("%03d", 1:dim(mat_rel2)[1]))
+
+df_family_indexing <- data.frame(Family_taxa = rownames(mat_rel[names(sort(rowSums(mat_rel), decreasing = T)),,drop=F]), FamilyID = rownames(mat_rel2))
+
+mat_rel2
+colSums(mat_rel2)
+dim(mat_rel2)
+
+## rank matrix per column
+library(matrixStats)
+
+# make 0 NA
+any(is.na(mat_rel2)) # no NA in the data
+mat_rel2[mat_rel2 == 0] <- NA
+dim(mat_rel2)
+sum(is.na(mat_rel2)) # 3547 NAs
+
+mat_rank <- apply(-mat_rel2, 2, rank)
+any(is.na(mat_rank)) # there should be NA
+dim(mat_rank)
+# change back to NA, which are supposed to be NA
+mat_rank[is.na(mat_rel2)] <- NA
+any(is.na(mat_rank))
+sum(is.na(mat_rank)) # 4116 NAs
+
+colMaxs(mat_rank, na.rm =T)
+colMins(mat_rank, na.rm =T)
+
+mat_rank[,1]
+table(mat_rank[,1])
+table(mat_rank[,2])
+table(mat_rank[,3])
+table(mat_rank[,4]) %>% tail()
+
+mat_rank
+
+## connect metadata to the asv table
+phy.clean.neg.10
+mat_meta <- as.matrix(sample_data(phy.clean.neg.10))
+class(mat_meta)
+df_meta <- as.data.frame(mat_meta)
+class(df_meta)
+
+## melt the total rank matrix into dataframe, then attach the metadata
+mat_rank
+dim(mat_rank)
+head(mat_rank)
+mlt_rank <- melt(mat_rank)
+colnames(mlt_rank) <- c("Family", "Sample", "Rank")  ## changed to "Family"
+head(mlt_rank)
+
+dim(mlt_rank) #70411 3
+colnames(mlt_rank)
+head(mlt_rank)
+
+colnames(df_meta)
+dim(df_meta) # 111
+df_meta <- df_meta %>% select(-Read_type, -ReadID, -SampleID) %>% unique()
+
+mlt_rank_meta <- mlt_rank %>% left_join(df_meta, by=c("Sample"="ReplicateID"))
+dim(mlt_rank_meta) #11285 13
+colnames(mlt_rank_meta)
+head(mlt_rank_meta)
+
+# replicate check - start with 1 sample
+mlt_rank_meta %>% select(Sample_name) %>% unique()
+mlt_B2_T0 <- mlt_rank_meta %>% filter(Sample_name == "Barneveld2_T0") 
+dim(mlt_B2_T0)
+head(mlt_B2_T0)
+
+
+# plot
+## get the rank abundance aligned to Barneveld2_T0
+vec_family_B2T0 <- mlt_B2_T0 %>% filter(Replicate == 1) %>% arrange(Rank) %>% select(Family)
+dim(vec_family_B2T0)
+head(vec_family_B2T0)
+vec_family_B2T0 <- vec_family_B2T0[,1]
+mlt_B2_T0$Family <- factor(mlt_B2_T0$Family, levels = vec_family_B2T0)
+
+mlt_B2_T0$Replicate <- factor(mlt_B2_T0$Replicate)　　　
+
+ggplot(mlt_B2_T0 %>% filter(Replicate ==1), aes(x = Family, y = Rank)) +
+  # geom_line(aes(col=Sample)) +
+  geom_point(aes(col=Replicate)) +
+  ggtitle("Barneveld2_T0") +
+  ylab("Rank \n") +
+  xlab("\n Family ID") +
+  mytheme_2d +
+  theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+
+# what is happening here?
+ggplot(mlt_B2_T0, aes(x = Family, y = Rank)) +
+  # geom_line(aes(col=Sample)) +
+  geom_point(aes(col=Replicate)) +
+  ggtitle("Barneveld2_T0") +
+  ylab("Rank \n") +
+  xlab("\n Family ID") +
+  mytheme_2d +
+  theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+  # scale_y_continuous(expand = c(0, 0))
+
+## plot across different samples, align family to replicate 1
+l_sample_names <- mlt_rank_meta %>% select(Sample_name) %>% unique()
+l_sample_names <- l_sample_names[,1]
+l_sample_names <- l_sample_names[-length(l_sample_names)] # remove positive sample
+
+plot_rank_family <- function(mlt_rank_meta, Sample_name_i = "Barneveld2_T0", Replicate_i = 1){
+  mlt_B2_T0 <- mlt_rank_meta %>% filter(Sample_name == Sample_name_i) 
+  dim(mlt_B2_T0)
+  head(mlt_B2_T0)
+  
+  ## get the rank abundance aligned to Barneveld2_T0
+  vec_family_B2T0 <- mlt_B2_T0 %>% filter(Replicate == Replicate_i) %>% arrange(Rank) %>% select(Family)
+  dim(vec_family_B2T0)
+  head(vec_family_B2T0)
+  vec_family_B2T0 <- vec_family_B2T0[,1]
+  mlt_B2_T0$Family <- factor(mlt_B2_T0$Family, levels = vec_family_B2T0)
+  mlt_B2_T0$Replicate <- factor(mlt_B2_T0$Replicate)　　　
+  
+  ggplot(mlt_B2_T0, aes(x = Family, y = Rank)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=Replicate)) +
+    ggtitle(paste0(Sample_name_i)) +
+    ylab("Rank") +
+    xlab("Family ID") +
+    mytheme_2d +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+    # scale_y_continuous(expand = c(0, 0))
+}
+
+# plot in 1 sheet
+l_plot <- list()
+for (i in 1:length(l_sample_names)) {
+    print(i)
+    l_plot[[i]] <- plot_rank_family(mlt_rank_meta, l_sample_names[i], Replicate_i=1)
+}
+
+library(gridExtra)
+grid.arrange(grobs = l_plot, ncol = 5)
+
+l_plot <- list()
+for (i in 1:length(l_sample_names)) {
+    print(i)
+    l_plot[[i]] <- plot_rank_family(mlt_rank_meta, l_sample_names[i], Replicate_i=2)
+}
+
+library(gridExtra)
+grid.arrange(grobs = l_plot, ncol = 5)
+
+l_plot <- list()
+for (i in 1:length(l_sample_names)) {
+    print(i)
+    l_plot[[i]] <- plot_rank_family(mlt_rank_meta, l_sample_names[i], Replicate_i=3)
+}
+
+library(gridExtra)
+grid.arrange(grobs = l_plot, ncol = 5)
+
+## plot abundance - rank plot to see how much abundance 
+mat_rel2
+mlt_rank_meta
+colnames(mlt_rank_meta)
+
+mlt_rel2 <- melt(mat_rel2)
+colnames(mlt_rel2) <- c("Family", "Sample", "Rel_abundance")
+head(mlt_rel2)
+
+# join two dataframes
+mlt_rank_rel <- mlt_rank_meta %>% left_join(mlt_rel2, by = c("Family"="Family", "Sample"="Sample"))
+head(mlt_rank_rel)
+colnames(mlt_rank_rel)
+# plot Rank (x) - relative abundance (y) plots
+l_sample_names
+
+mlt_rank_rel_B2_T0 <- mlt_rank_rel %>% filter(Sample_name == "Barneveld2_T0")
+mlt_rank_rel_B2_T0$Replicate <- factor(mlt_rank_rel_B2_T0$Replicate)
+
+dim(mlt_rank_rel_B2_T0)
+
+# what is happening here?
+mlt_rank_rel_B2_T0 %>% select(Rank, Rel_abundance) # oh no... got ranked as well...
+
+
+dim(na.omit(mlt_rank_rel_B2_T0))
+mlt_rank_rel_B2_T0_noNA <- na.omit(mlt_rank_rel_B2_T0)
+
+ggplot(mlt_rank_rel_B2_T0_noNA, aes(x = Rank, y = Rel_abundance)) +
+  geom_line(aes(col=Replicate)) +
+  geom_point(aes(col=Replicate)) +
+  ggtitle(paste0("Barneveld2_T0")) +
+  ylab("Relative abundance") +
+  xlab("Rank (from highest)") +
+  mytheme_2d
+
+mlt_rank_rel_B2_T0_noNA %>% group_by(Replicate) %>% summarize(Total = sum(Rel_abundance))
+
+## plot Rel_abundance - rank plots for all samples
+plot_rank_abundance <- function(mlt_rank_rel, Sample_name_i){
+  mlt_rank_rel_B2_T0 <- mlt_rank_rel %>% filter(Sample_name == Sample_name_i)
+  
+  mlt_rank_rel_B2_T0$Replicate <- factor(mlt_rank_rel_B2_T0$Replicate)
+  
+  mlt_rank_rel_B2_T0_noNA <- na.omit(mlt_rank_rel_B2_T0)
+  df_mlt_plot <- mlt_rank_rel_B2_T0_noNA %>% select(Sample_name, Replicate, Rank, Rel_abundance) %>% ungroup()
+  colnames(df_mlt_plot)
+  class(df_mlt_plot)
+  # print("we are good")
+  
+  ggplot(df_mlt_plot, aes(x=Rank, y=Rel_abundance)) +
+    geom_point(aes(col=Replicate)) +
+    geom_line(aes(col=Replicate)) +
+    ggtitle(paste0(Sample_name_i)) +
+    ylab("Relative abundance") +
+    xlab("Rank") +
+    mytheme_2d
+}
+
+# plot in 1 sheet
+l_plot2 <- list()
+for (i in 1:length(l_sample_names)) {
+  print(i)
+  # print(l_sample_names[i])
+  l_plot2[[i]] <- plot_rank_abundance(mlt_rank_rel, l_sample_names[i])
+}
+
+library(gridExtra)
+grid.arrange(grobs = l_plot2, ncol = 5)
+
+
+```
+
+## Let's see if rank changes
+
+## visualize first
+```{r}
+colnames(mlt_rank_rel)
+
+
+df_LB <- mlt_rank_rel %>% filter(Soil == "LaBaghWoods1")
+dim(df_LB)
+colnames(df_LB)
+
+df_B <- mlt_rank_rel %>% filter(Soil == "Barneveld2")
+dim(df_B)
+
+## first LaBaghWoods
+## Next, Barneveld
+df_B_H0 <- df_B %>% filter(Sample_name %in% c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL")) 
+dim(df_B_H0)
+head(df_B_H0)
+colnames(df_B_H0)
+
+## get the rank abundance aligned to Barneveld2_T0
+vec_family_B_H0 <- df_B_H0 %>% filter(Time_point == "T0", Replicate == 1) %>% arrange(Rank) %>% select(Family)
+dim(vec_family_B_H0)
+head(vec_family_B_H0)
+vec_family_B_H0 <- vec_family_B_H0[,1]
+df_B_H0$Family <- factor(df_B_H0$Family, levels = vec_family_B_H0)
+df_B_H0$Replicate <- factor(df_B_H0$Replicate)　　　
+
+ggplot(df_B_H0, aes(x = Family, y = Rank)) +
+  # geom_line(aes(col=Sample)) +
+  geom_point(aes(col=Sample_name, shape=Replicate)) +
+  # ggtitle(paste0(Sample_name_i)) +
+  ylab("Rank") +
+  xlab("Family ID") +
+  mytheme_2d +
+  theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+
+
+
+plot_rank_change <- function(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"),
+                             Title = "Barneveld2_pH5.73 No pH perturbation"){
+  df_B_H0 <- mlt_rank_rel %>% filter(Sample_name %in% vec_Sample_name) 
+  dim(df_B_H0)
+  head(df_B_H0)
+  colnames(df_B_H0)
+  
+  ## get the rank abundance aligned to Barneveld2_T0
+  vec_family_B_H0 <- df_B_H0 %>% filter(Time_point == "T0", Replicate == 1) %>% arrange(Rank) %>% select(Family)
+  dim(vec_family_B_H0)
+  head(vec_family_B_H0)
+  vec_family_B_H0 <- vec_family_B_H0[,1]
+  df_B_H0$Family <- factor(df_B_H0$Family, levels = vec_family_B_H0)
+  df_B_H0$Replicate <- factor(df_B_H0$Replicate)　　　
+  
+  ggplot(df_B_H0, aes(x = Family, y = Rank)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=Sample_name, shape=Replicate)) +
+    ggtitle(paste0(Title)) +
+    scale_color_manual(values = c("black","blue","red")) +
+    ylab("Rank") +
+    xlab("Family ID") +
+    mytheme_2d +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+}
+
+plot_rank_change(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"),
+                 Title = "Barneveld2(pH5.73): No pH perturbation")
+
+plot_rank_change(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_OH10", "Barneveld2_T9_OH10_CHL"),
+                 Title = "Barneveld2(pH5.73): Basic pH perturbation to pH 8.5")
+
+plot_rank_change(mlt_rank_rel, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_H0", "LaBaghWoods1_T9_H0_CHL"),
+                 Title = "LaBaghWoods1(pH6.66): No pH perturbation")
+
+plot_rank_change(mlt_rank_rel, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_OH8", "LaBaghWoods1_T9_OH8_CHL"),
+                 Title = "LaBaghWoods1(pH6.66): Basic pH perturbation to pH 9.1")
+
+
+
+```
+
+## Get average of replicates
+
+```{r}
+mlt_rank_rel %<>% filter(Sample_name != "Positive")
+colnames(mlt_rank_rel)
+head(mlt_rank_rel)
+dim(mlt_rank_rel) # 10980
+
+mlt_ave_rel <- mlt_rank_rel %>% group_by(Family, Sample_name, Soil, Time_point, Titration_type, Unit) %>% summarize(Ave_rel_abundance = mean(Rel_abundance, na.rm=T)) %>% ungroup() # na.rm is important
+
+dim(mlt_ave_rel)
+colnames(mlt_ave_rel)
+
+mlt_ave_rel[is.na(mlt_ave_rel)]
+df_na <- mlt_ave_rel[rowSums(is.na(mlt_ave_rel)) > 0,] 
+df_na
+mlt_ave_rel <- na.omit(mlt_ave_rel)
+dim(mlt_ave_rel) #3357
+mlt_ave_rel %>% group_by(Sample_name) %>% summarize(Sums = sum(Ave_rel_abundance, na.rm=T)) # yes it did a good job
+
+# Let's get rank from relative abundance
+pvt_ave_rel <- mlt_ave_rel %>% select(Sample_name, Family, Ave_rel_abundance)
+mat_ave_rel <- pvt_ave_rel %>% pivot_wider(names_from = Sample_name, values_from = Ave_rel_abundance)
+
+dim(mat_ave_rel) # 299 16
+mat_ave_rel[is.na(mat_ave_rel)]
+df_na <- mat_ave_rel[rowSums(is.na(mat_ave_rel)) > 0,] 
+df_na
+
+mat_ave_rel$Family
+mat_ave_rel <- tibble::column_to_rownames(mat_ave_rel, var = "Family")
+colSums(mat_ave_rel, na.rm =T)
+
+## rank matrix per column
+library(matrixStats)
+
+# make 0 NA
+any(is.na(mat_ave_rel)) # no NA in the data? there are NA in data
+sum(is.na(mat_ave_rel)) # 1128 NAs: we need NA in order to not apply rank to 0s.
+
+mat_ave_rank <- apply(-mat_ave_rel, 2, rank)
+any(is.na(mat_ave_rank)) # there should be NA, let's make it back to have NA.
+dim(mat_ave_rank)  # 299 15
+# change back to NA, which are supposed to be NA
+mat_ave_rank[is.na(mat_ave_rel)] <- NA
+any(is.na(mat_ave_rank))
+sum(is.na(mat_ave_rank)) # 1128 NAs
+
+colMaxs(mat_ave_rank, na.rm =T)
+colMins(mat_ave_rank, na.rm =T)
+
+mat_ave_rank[,1]
+table(mat_ave_rank[,1])
+table(mat_ave_rank[,2])
+table(mat_ave_rank[,3])
+table(mat_ave_rank[,4]) %>% tail()
+
+mat_ave_rank
+
+## connect metadata to the asv table
+df_meta
+colnames(df_meta)
+dim(df_meta) # 111
+df_meta_sample_name <- df_meta %>% select(-ReplicateID, -Replicate, -Sample_Well, -TubeNumber) %>% unique()
+dim(df_meta_sample_name)
+
+## melt the total rank matrix into dataframe, then attach the metadata
+mat_ave_rank
+dim(mat_ave_rank)
+head(mat_ave_rank)
+mlt_ave_rank <- melt(mat_ave_rank)
+colnames(mlt_ave_rank) <- c("Family", "Sample_name", "Rank")  ## changed to "Family"
+head(mlt_ave_rank)
+
+dim(mlt_ave_rank) #4485    3
+colnames(mlt_ave_rank)
+head(mlt_ave_rank)
+
+# left join metadata
+mlt_ave_rank_meta <- mlt_ave_rank %>% left_join(df_meta_sample_name, by=c("Sample_name"="Sample_name"))
+dim(mlt_ave_rank_meta) #4485    9
+colnames(mlt_ave_rank_meta)
+head(mlt_ave_rank_meta)
+
+plot_rank_change_ave <- function(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"),
+                             Title = "Barneveld2_pH5.73 No pH perturbation"){
+  df_B_H0 <- mlt_rank_rel %>% filter(Sample_name %in% vec_Sample_name) 
+  dim(df_B_H0)
+  head(df_B_H0)
+  colnames(df_B_H0)
+  
+  ## get the rank abundance aligned to Barneveld2_T0
+  vec_family_B_H0 <- df_B_H0 %>% filter(Time_point == "T0") %>% arrange(Rank) %>% select(Family)
+  dim(vec_family_B_H0)
+  head(vec_family_B_H0)
+  vec_family_B_H0 <- vec_family_B_H0[,1]
+  df_B_H0$Family <- factor(df_B_H0$Family, levels = vec_family_B_H0)
+  # df_B_H0$Replicate <- factor(df_B_H0$Replicate)　　　
+  
+  ggplot(df_B_H0, aes(x = Family, y = Rank)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=Sample_name)) +
+    ggtitle(paste0(Title)) +
+    scale_color_manual(values = c("black","blue","red")) +
+    ylab("Rank") +
+    xlab("Family ID") +
+    mytheme_2d +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+}
+
+l_ave1 <- plot_rank_change_ave(mlt_ave_rank_meta, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"),
+                 Title = "Barneveld2(pH5.73): No pH perturbation")
+l_ave1
+
+l_ave2 <- plot_rank_change_ave(mlt_ave_rank_meta, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_OH10", "Barneveld2_T9_OH10_CHL"),
+                 Title = "Barneveld2(pH5.73): Basic pH perturbation to pH 8.5")
+l_ave2
+
+l_ave3 <- plot_rank_change_ave(mlt_ave_rank_meta, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_H0", "LaBaghWoods1_T9_H0_CHL"),
+                 Title = "LaBaghWoods1(pH6.66): No pH perturbation")
+l_ave3
+
+l_ave4 <- plot_rank_change_ave(mlt_ave_rank_meta, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_OH8", "LaBaghWoods1_T9_OH8_CHL"),
+                 Title = "LaBaghWoods1(pH6.66): Basic pH perturbation to pH 9.1")
+
+l_ave4
+
+l_plot_ave <- list()
+l_plot_ave[[1]] <- l_ave1
+l_plot_ave[[2]] <- l_ave2
+l_plot_ave[[3]] <- l_ave3
+l_plot_ave[[4]] <- l_ave4
+
+library(gridExtra)
+grid.arrange(grobs = l_plot_ave, ncol = 2)
+
+```
+
+
+## Compute percent rank change!
+
+```{r}
+mlt_ave_rank_meta
+
+colnames(mat_ave_rank)
+colMaxs(mat_ave_rank, na.rm=T)
+
+# max rank compute
+df_max_rank <- data.frame(Sample_name = colnames(mat_ave_rank), Max_rank = colMaxs(mat_ave_rank, na.rm=T))
+df_max_rank
+
+# left join
+dim(mlt_ave_rank_meta)
+df_rank_percent <- mlt_ave_rank_meta %>% left_join(df_max_rank, by = c("Sample_name"="Sample_name"))
+colnames(df_rank_percent)
+
+# NAs?
+df_rank_percent[is.na(df_rank_percent)]
+df_na <- df_rank_percent[rowSums(is.na(df_rank_percent)) > 0,] 
+df_na
+
+# compute rank top percent
+df_rank_percent %<>% mutate(Rank_top_percent = Rank * 100 / Max_rank)
+df_rank_percent$Rank_top_percent
+
+## Let's compute deltaX = X(T9) - X(T0)
+# X is rank or relative abundance
+
+df_rank_percent %>% head()
+
+# augment metadata
+df_rank_percent$CHL <- ifelse(grepl("CHL", df_rank_percent$Sample_name), "CHL", "None")
+df_rank_percent$Perturbation <- ifelse(grepl("H0", df_rank_percent$Sample_name), "No_perturbation", "Basic_perturbation")
+df_rank_percent$PMA <- ifelse(grepl("PMA", df_rank_percent$Sample_name), "PMA", "None")
+
+
+plot_rank_change_percent <- function(df_rank_percent, Soil_name = "Barneveld2"){
+  # subset sample and exclude PMA samples
+  df_subset_sample <- df_rank_percent %>% filter(Soil == Soil_name, PMA == "None")
+  # df_subset_sample <- df_rank_percent 
+  dim(df_subset_sample)
+  head(df_subset_sample)
+  colnames(df_subset_sample)
+  
+  ## get the rank abundance aligned to Barneveld2_T0
+  colnames(df_subset_sample)
+  df_subset_sample
+  # make new column to indicate CHL or None
+  
+  # T0, T9 split
+  df_subset_T0 <- df_subset_sample %>% filter(Time_point == "T0") 
+  dim(df_subset_T0)
+  df_subset_T9 <- df_subset_sample %>% filter(Time_point == "T9") %>% rename(Rank_top_percent_T9 = Rank_top_percent)
+  dim(df_subset_T9)
+  
+  df_subset_T0 %<>% select(Family, Rank_top_percent) %>% unique() %>% rename(Rank_top_percent_T0 = Rank_top_percent)
+  # merge and compute percent change
+  df_subset_T9 %<>% left_join(df_subset_T0, by = c("Family" = "Family"))
+  df_delta_rank <- df_subset_T9 %>% mutate(Delta_rank_percent = -(Rank_top_percent_T9 - Rank_top_percent_T0) )
+  # when increased, it's better (multiply by (-))
+  head(df_subset_T9)
+  dim(df_subset_T9)
+  
+  vec_family <- df_subset_sample %>% filter(Time_point == "T0") %>% arrange(Rank) %>% select(Family)
+  dim(vec_family)
+  head(vec_family)
+  vec_family <- vec_family[,1]
+  df_delta_rank$Family <- factor(df_delta_rank$Family, levels = vec_family)
+  # df_subset_sample$Replicate <- factor(df_subset_sample$Replicate)　　　
+  colnames(df_delta_rank)
+  
+  df_delta_rank$CHL <- factor(df_delta_rank$CHL, levels =c("None", "CHL"))
+  df_delta_rank$Perturbation <- factor(df_delta_rank$Perturbation, levels =c("No_perturbation", "Basic_perturbation"))
+  
+  ggplot(df_delta_rank, aes(x = Family, y = Delta_rank_percent)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=CHL)) +
+    # ggtitle(paste0(Title)) +
+    scale_y_continuous(breaks=seq(-100,100,10), limits = c(-100, 100))+
+    scale_color_manual(values = c("blue","red")) +
+    ylab("Delta Rank percent (delta % = T0 rank% - T9 rank%)") +
+    xlab("Family ID (starting from highest rank at T0)") +
+    mytheme_2dy +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())+
+    facet_grid(Soil ~ Perturbation, switch="y") +
+    theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+    theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+}
+
+plot_rank_change_percent(df_rank_percent, Soil_name = "Barneveld2")
+plot_rank_change_percent(df_rank_percent, Soil_name = "LaBaghWoods1")
+
+
+
+```
+
+## Let's do the same thing for relative abundance (delta relative abundance)
+
+```{r}
+
+mlt_rank_rel %<>% filter(Sample_name != "Positive")
+colnames(mlt_rank_rel)
+head(mlt_rank_rel)
+dim(mlt_rank_rel) # 10980
+
+mlt_ave_rel <- mlt_rank_rel %>% group_by(Family, Sample_name, Soil, Time_point, Titration_type, Unit) %>% summarize(Ave_rel_abundance = mean(Rel_abundance, na.rm=T)) %>% ungroup() # na.rm is important
+
+dim(mlt_ave_rel)  #4575
+colnames(mlt_ave_rel)
+
+mlt_ave_rel[is.na(mlt_ave_rel)]
+df_na <- mlt_ave_rel[rowSums(is.na(mlt_ave_rel)) > 0,] 
+df_na
+mlt_ave_rel <- na.omit(mlt_ave_rel)
+dim(mlt_ave_rel) #3357
+mlt_ave_rel %>% group_by(Sample_name) %>% summarize(Sums = sum(Ave_rel_abundance, na.rm=T)) # yes it did a good job
+
+colnames(mlt_ave_rel)
+
+
+# augment metadata
+df_ave_rel <- mlt_ave_rel
+df_ave_rel$CHL <- ifelse(grepl("CHL", df_ave_rel$Sample_name), "CHL", "None")
+df_ave_rel$Perturbation <- ifelse(grepl("H0", df_ave_rel$Sample_name), "No_perturbation", "Basic_perturbation")
+df_ave_rel$PMA <- ifelse(grepl("PMA", df_ave_rel$Sample_name), "PMA", "None")
+
+plot_rel_abun_change <- function(df_ave_rel, Soil_name = "Barneveld2"){
+  # subset sample and exclude PMA samples
+  df_subset_sample <- df_ave_rel %>% filter(Soil == Soil_name, PMA == "None")
+  # df_subset_sample <- df_ave_rel 
+  dim(df_subset_sample)
+  head(df_subset_sample)
+  colnames(df_subset_sample)
+  
+  ## get the rank abundance aligned to Barneveld2_T0
+  colnames(df_subset_sample)
+  df_subset_sample
+  # make new column to indicate CHL or None
+  
+  # T0, T9 split
+  df_subset_T0 <- df_subset_sample %>% filter(Time_point == "T0") 
+  dim(df_subset_T0)
+  df_subset_T9 <- df_subset_sample %>% filter(Time_point == "T9") %>% rename(Ave_rel_abundance_T9 = Ave_rel_abundance)
+  dim(df_subset_T9)
+  
+  df_subset_T0 %<>% select(Family, Ave_rel_abundance) %>% unique() %>% rename(Ave_rel_abundance_T0 = Ave_rel_abundance)
+  # merge and compute percent change
+  df_subset_T9 %<>% left_join(df_subset_T0, by = c("Family" = "Family"))
+  df_delta_relabun <- df_subset_T9 %>% mutate(Delta_ave_rel = (Ave_rel_abundance_T9 - Ave_rel_abundance_T0) )
+  # when increased, it's better (multiply by (-))
+  head(df_delta_relabun)
+  dim(df_delta_relabun) # 875
+  colnames(df_delta_relabun)
+  
+  # df_delta_relabun <- na.omit(df_delta_relabun)
+  dim(df_delta_relabun) # 798
+  
+  length(df_delta_relabun$Family %>% unique())
+  
+  vec_family <- df_subset_sample %>% filter(Time_point == "T0") %>% arrange(desc(Ave_rel_abundance)) %>% select(Family)
+  dim(vec_family)
+  head(vec_family)
+  vec_family <- vec_family$Family
+  df_delta_relabun$Family <- factor(df_delta_relabun$Family, levels = vec_family)
+  # df_subset_sample$Replicate <- factor(df_subset_sample$Replicate)　　　
+  colnames(df_delta_relabun)
+  
+  df_delta_relabun$CHL <- factor(df_delta_relabun$CHL, levels =c("None", "CHL"))
+  df_delta_relabun$Perturbation <- factor(df_delta_relabun$Perturbation, levels =c("No_perturbation", "Basic_perturbation"))
+  
+  ggplot(df_delta_relabun, aes(x = Family, y = Delta_ave_rel)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=CHL), size=2, alpha = 0.6) +
+    # ggtitle(paste0(Title)) +
+    scale_y_continuous(breaks=seq(-0.1,0.1,0.02), limits = c(-0.1, 0.1))+
+    scale_color_manual(values = c("blue","red")) +
+    ylab("Delta Relative abundance (delta RA = RA(T9) - RA(T0))") +
+    xlab("Family ID (starting from highest rank at T0)") +
+    mytheme_2dy +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())+
+    facet_grid(Soil ~ Perturbation, switch="y") +
+    theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+    theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+}
+
+# check
+# df_major_change <- df_delta_relabun %>% filter(Perturbation == "Basic_perturbation") %>% filter(Delta_ave_rel >0.02 | Delta_ave_rel < -0.02)
+
+(p_ra1 <- plot_rel_abun_change(df_ave_rel, Soil_name = "Barneveld2"))
+(p_ra2 <- plot_rel_abun_change(df_ave_rel, Soil_name = "LaBaghWoods1"))
+
+figure <- grid.arrange(p_ra1 + rremove("xy.title"), p_ra2 + rremove("xy.title"), nrow = 2)
+
+annotate_figure(figure, 
+                left = text_grob("Delta Relative abundance (delta RA = RA(T9) - RA(T0)) \n", color = "black", rot = 90, vjust = 1, size =20, face='bold'),
+                bottom = text_grob("Family ID (starting from highest rank at T0)\n", color = "black", size =20, face='bold')
+                )
+
+
+```
+
+
+## Relative abundance
+
+```{r}
+
+plot_rel_abun_change_normalized <- function(df_ave_rel, Soil_name = "Barneveld2"){
+  # subset sample and exclude PMA samples
+  df_subset_sample <- df_ave_rel %>% filter(Soil == Soil_name, PMA == "None")
+  # df_subset_sample <- df_ave_rel 
+  dim(df_subset_sample)
+  head(df_subset_sample)
+  colnames(df_subset_sample)
+  
+  ## get the rank abundance aligned to Barneveld2_T0
+  colnames(df_subset_sample)
+  df_subset_sample
+  # make new column to indicate CHL or None
+  
+  # T0, T9 split
+  df_subset_T0 <- df_subset_sample %>% filter(Time_point == "T0") 
+  dim(df_subset_T0)
+  df_subset_T9 <- df_subset_sample %>% filter(Time_point == "T9") %>% rename(Ave_rel_abundance_T9 = Ave_rel_abundance)
+  dim(df_subset_T9)
+  
+  df_subset_T0 %<>% select(Family, Ave_rel_abundance) %>% unique() %>% rename(Ave_rel_abundance_T0 = Ave_rel_abundance)
+  # merge and compute percent change
+  df_subset_T9 %<>% left_join(df_subset_T0, by = c("Family" = "Family"))
+  df_delta_relabun <- df_subset_T9 %>% mutate(Delta_ave_rel_norm = (Ave_rel_abundance_T9 - Ave_rel_abundance_T0) / Ave_rel_abundance_T0 )
+  # when increased, it's better (multiply by (-))
+  head(df_delta_relabun)
+  dim(df_delta_relabun) # 875
+  colnames(df_delta_relabun)
+  hist(df_delta_relabun$Delta_ave_rel_norm)
+  
+  # df_delta_relabun <- na.omit(df_delta_relabun)
+  dim(df_delta_relabun) # 798
+  
+  length(df_delta_relabun$Family %>% unique())
+  
+  vec_family <- df_subset_sample %>% filter(Time_point == "T0") %>% arrange(desc(Ave_rel_abundance)) %>% select(Family)
+  dim(vec_family)
+  head(vec_family)
+  vec_family <- vec_family$Family
+  df_delta_relabun$Family <- factor(df_delta_relabun$Family, levels = vec_family)
+  # df_subset_sample$Replicate <- factor(df_subset_sample$Replicate)　　　
+  colnames(df_delta_relabun)
+  
+  df_delta_relabun$CHL <- factor(df_delta_relabun$CHL, levels =c("None", "CHL"))
+  df_delta_relabun$Perturbation <- factor(df_delta_relabun$Perturbation, levels =c("No_perturbation", "Basic_perturbation"))
+  
+  ggplot(df_delta_relabun, aes(x = Family, y = Delta_ave_rel_norm)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=CHL), size=2, alpha = 0.6) +
+    # ggtitle(paste0(Title)) +
+    # scale_y_continuous(breaks=seq(-0.1,0.1,0.02), limits = c(-0.1, 0.1))+
+    scale_color_manual(values = c("blue","red")) +
+    ylab("Delta Relative abundance normalized (delta RA / RA(T0) = (RA(T9)-RA(T0))/RA(T0) )") +
+    xlab("Family ID (starting from highest rank at T0)") +
+    mytheme_2dy +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())+
+    facet_grid(Soil ~ Perturbation, switch="y") +
+    theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+    theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+}
+
+# check
+# df_major_change <- df_delta_relabun %>% filter(Perturbation == "Basic_perturbation") %>% filter(Delta_ave_rel_norm >0.02 | Delta_ave_rel_norm < -0.02)
+
+(p_ra3 <- plot_rel_abun_change_normalized(df_ave_rel, Soil_name = "Barneveld2"))
+(p_ra4 <- plot_rel_abun_change_normalized(df_ave_rel, Soil_name = "LaBaghWoods1"))
+
+figure <- grid.arrange(p_ra3 + rremove("xy.title"), p_ra4 + rremove("xy.title"), nrow = 2)
+
+annotate_figure(figure, 
+                left = text_grob("Delta Relative abundance normalized (delta RA / RA(T0) = (RA(T9)-RA(T0))/RA(T0) ) \n", color = "black", rot = 90, vjust = 1, size =15, face='bold'),
+                bottom = text_grob("Family ID (starting from highest rank at T0)\n", color = "black", size =15, face='bold')
+                )
+
+
+## who are they?
+
+generate_df_rel_abun_change_normalized <- function(df_ave_rel){
+  # subset sample and exclude PMA samples
+  df_subset_sample <- df_ave_rel %>% filter(PMA == "None")
+  # df_subset_sample <- df_ave_rel 
+  dim(df_subset_sample)
+  head(df_subset_sample)
+  colnames(df_subset_sample)
+  
+  ## get the rank abundance aligned to Barneveld2_T0
+  colnames(df_subset_sample)
+  df_subset_sample
+  # make new column to indicate CHL or None
+  
+  # T0, T9 split
+  df_subset_T0 <- df_subset_sample %>% filter(Time_point == "T0") 
+  dim(df_subset_T0)
+  df_subset_T9 <- df_subset_sample %>% filter(Time_point == "T9") %>% rename(Ave_rel_abundance_T9 = Ave_rel_abundance)
+  dim(df_subset_T9)
+  
+  df_subset_T0 %<>% select(Family, Ave_rel_abundance) %>% unique() %>% rename(Ave_rel_abundance_T0 = Ave_rel_abundance)
+  # merge and compute percent change
+  df_subset_T9 %<>% left_join(df_subset_T0, by = c("Family" = "Family"))
+  df_delta_relabun <- df_subset_T9 %>% mutate(Delta_ave_rel_norm = (Ave_rel_abundance_T9 - Ave_rel_abundance_T0) / Ave_rel_abundance_T0 )
+  # when increased, it's better (multiply by (-))
+  head(df_delta_relabun)
+  dim(df_delta_relabun) # 875
+  colnames(df_delta_relabun)
+
+  # df_delta_relabun <- na.omit(df_delta_relabun)
+  dim(df_delta_relabun) # 798
+  
+  return(df_delta_relabun)
+}
+
+df_rel_abun_change <- generate_df_rel_abun_change_normalized(df_ave_rel)
+dim(df_rel_abun_change)
+
+df_tracking <- df_rel_abun_change %>% filter(Delta_ave_rel_norm > 20, Perturbation == "Basic_perturbation", CHL=="CHL")
+
+df_tracking$Family
+
+## get the taxa table
+df_family_indexing %>% filter(FamilyID %in% df_tracking$Family )
+
+
+```
+
+## PMA experiment
+
+```{r}
+## 
+mlt_rank_rel$Sample_name %>% unique()
+mlt_rank_rel$Sample %>% unique()
+
+df_PMA_rank_rel <- mlt_rank_rel
+colnames(df_PMA_rank_rel)
+head(df_PMA_rank_rel)
+
+df_PMA_rank_rel$CHL <- ifelse(grepl("CHL", df_PMA_rank_rel$Sample_name), "CHL", "None")
+df_PMA_rank_rel$Perturbation <- ifelse(grepl("H0", df_PMA_rank_rel$Sample_name), "No_perturbation", "Basic_perturbation")
+df_PMA_rank_rel$PMA <- ifelse(grepl("PMA", df_PMA_rank_rel$Sample_name), "PMA", "None")
+
+df_PMA_rank_rel$PMA_sample <- str_replace(df_PMA_rank_rel$Sample_name, "PMA_", "")
+
+# only use Barneveld2
+dim(df_PMA_rank_rel)
+df_PMA_rank_rel %<>% filter(Soil == "Barneveld2")
+dim(df_PMA_rank_rel)
+
+df_PMA_rank_rel$Sample_name %>% unique()
+
+
+
+plot_rank_compare_PMA <- function(df_PMA_rank_rel, vec_Sample_name = c("Barneveld2_T0")){
+  df_B_H0 <- df_PMA_rank_rel %>% filter(PMA_sample %in% vec_Sample_name) 
+  
+  ## get the rank abundance aligned to Barneveld2_T0
+  vec_family_B_H0 <- df_B_H0 %>% filter(PMA == "None", Replicate == 1) %>% arrange(Rank) %>% select(Family)
+  dim(vec_family_B_H0)
+  head(vec_family_B_H0)
+  vec_family_B_H0 <- vec_family_B_H0[,1]
+  df_B_H0$Family <- factor(df_B_H0$Family, levels = vec_family_B_H0)
+  df_B_H0$Replicate <- factor(df_B_H0$Replicate)　　　
+  
+  ggplot(df_B_H0, aes(x = Family, y = Rank)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=PMA, shape=Replicate)) +
+    ggtitle(paste0(vec_Sample_name)) +
+    scale_color_manual(values = c("black","cyan3")) +
+    ylab("Rank") +
+    xlab("Family ID") +
+    mytheme_2d +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+}
+
+l_PMA_sample <- df_PMA_rank_rel$PMA_sample %>% unique()
+l_PMA_sample <- c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL", "Barneveld2_T9_OH10", "Barneveld2_T9_OH10_CHL")
+# plot in 1 sheet
+l_pma <- list()
+for (i in 1:length(l_PMA_sample)) {
+  print(i)
+  # print(l_sample_names[i])
+  l_pma[[i]] <- plot_rank_compare_PMA(df_PMA_rank_rel, vec_Sample_name = l_PMA_sample[i])
+}
+
+library(gridExtra)
+grid.arrange(grobs = l_pma, nrow = 2)
+
+
+```
+
+## PMA rank change plots
+
+```{r}
+(l_ave_pma1 <- plot_rank_change_ave(mlt_ave_rank_meta, vec_Sample_name = c("PMA_Barneveld2_T0", "PMA_Barneveld2_T9_H0", "PMA_Barneveld2_T9_H0_CHL"),
+                 Title = "[PMA] Barneveld2(pH5.73): No pH perturbation"))
+(l_ave_pma2 <- plot_rank_change_ave(mlt_ave_rank_meta, vec_Sample_name = c("PMA_Barneveld2_T0", "PMA_Barneveld2_T9_OH10", "PMA_Barneveld2_T9_OH10_CHL"),
+                 Title = "[PMA] Barneveld2(pH5.73): Basic pH perturbation to pH 8.5"))
+
+```
+

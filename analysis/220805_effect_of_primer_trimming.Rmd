@@ -1,0 +1,364 @@
+---
+title: "220805_effect_of_primer_trimming"
+author: "Kiseok Lee"
+date: "2022-08-05"
+output: workflowr::wflow_html
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r global_options, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(fig.width=11, fig.height=9,
+                      error=TRUE, echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE,
+                      tidy.opts=list(width.cutoff=40),tidy=TRUE)
+```
+
+## effect of primer trimming
+Researcher & Analysis: **Kiseok Lee** \
+Experiment Date: 6/10/22 - 6/17/22 (5 day each) \
+Analysis Date: 8/5/21 \
+Lab: **Seppe Kuehn** at UChicago \
+
+## Import libraries and setup
+```{r}
+# libraries
+library(phyloseq)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(vegan)
+library(tidyverse)
+library(magrittr)
+library(readxl)
+library(reshape2)
+library(gtools)
+library(devtools)
+library(openxlsx)
+library(ape)
+library(stringr)
+library(tidyr)
+library(ggrepel)
+library(ggpubr)
+library(scales)
+require(gridExtra)
+library(grid)
+library(agricolae)
+
+library(BiocManager)
+
+
+# do I need these?
+#library(seqtime)
+# BiocManager::install("seqtime")
+library(metagenomeSeq)
+# BiocManager::install("metagenomeSeq", version = "3.12")
+
+
+# color collection
+my_color_collection <- c(
+  "#CBD588", "#5F7FC7", "orange", "#AD6F3B", "#673770", 
+  "#D14285", "#652926", "#C84248", "#8569D5", "#5E738F",
+  "#D1A33D", "#8A7C64", "#599861","#616163", "#FFCDB2",
+  "#6D9F71", "#242F40",
+  "#CCA43B", "#F92A82", "#ED7B84", "#7EB77F", 
+  "#DEC4A1", "#E5D1D0", '#0E8482', '#C9DAEA', '#337357', 
+  '#95C623', '#E55812', '#04471C', '#F2D7EE', '#D3BCC0', 
+  '#A5668B', '#69306D', '#0E103D', '#1A535C', '#4ECDC4', 
+  '#F7FFF7', '#FF6B6B', '#FFE66D', '#6699CC', '#FFF275', 
+  '#FF8C42', '#FF3C38', '#A23E48', '#000000', '#CF5C36', 
+  '#EEE5E9', '#7C7C7C', '#EFC88B', '#2E5266', '#6E8898', 
+  '#9FB1BC', '#D3D0CB', '#E2C044', '#5BC0EB', '#FDE74C', 
+  '#9BC53D', '#E55934', '#FA7921', "#CD9BCD", "#508578", "#DA5724")
+
+## theme for ggplot
+mytheme <- theme_bw() + 
+  theme(text = element_text(face="bold", colour = 'black'),
+        plot.title = element_text(size = 19,hjust = 0.5,face="bold", colour = 'black'),
+        axis.title.x = element_text(size = 17,hjust = 0.5,face="bold", colour = 'black'),
+        axis.title.y = element_text(size = 17,hjust = 0.5,face="bold", colour = 'black'),
+        axis.text.x = element_text(hjust = 0.5, vjust=0.3,size=13,face="bold", colour = 'black'),
+        axis.text.y = element_text(size=13,face="bold", colour = 'black'),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),panel.background=element_blank(),panel.border=element_blank(),plot.background=element_blank(),
+        axis.ticks = element_line(size = 1.1),
+        legend.text=element_text(size=10,face="bold", colour = 'black'))
+
+mytheme_2d <- theme_bw() +
+  theme(text = element_text(face="bold", colour = 'black'),
+        plot.title = element_text(size = 19,hjust = 0.5,face="bold", colour = 'black'),
+        axis.title.x = element_text(size = 17,hjust = 0.5,face="bold", colour = 'black'),
+        axis.title.y = element_text(size = 17,hjust = 0.5,face="bold", colour = 'black'),
+        axis.text.x = element_text(hjust = 0.5, vjust=0.3,size=13,face="bold", colour = 'black'),
+        axis.text.y = element_text(size=13,face="bold", colour = 'black'),
+        axis.ticks = element_line(size = 1.1),
+        legend.text=element_text(size=10,face="bold", colour = 'black'),
+        # panel.grid.major = element_blank(),
+        panel.background=element_blank(),plot.background=element_blank()
+        )
+  # theme(panel.grid.major = element_blank()) +
+  # theme(panel.grid.minor = element_blank(),panel.background=element_blank(),plot.background=element_blank())
+
+
+# for git push, use this instead of using wflow_git_push()
+# git push -u origin master (in the Git app / in the working directory)
+
+# for making pdf file
+# library(rmarkdown)
+# render("analysis/~~.Rmd", "pdf_document")
+
+```
+
+## Import biom file
+Before: pear merge, no trimming of adapter and primer
+After: trim primer then dada2 denoise-paired
+```{r}
+## 1. Import "before file"
+
+# We can then load the biom file with phyloseq function import_biom. We extract the OTU table with OTU abundances and the taxonomy table from the resulting phyloseq object.
+bac_phylo=import_biom("data/220726_Miseq_micro_v2/merged/asv_table_final.biom")
+
+# in metadata erase # (This step is essential)
+map <- read.table(file = 'data/220726_Miseq_micro_v2/merged/sample_metadata_without_hashtag.tsv', sep = '\t', header = TRUE)
+map <- sample_data(map)
+
+# Assign rownames to be Sample ID's
+map$SampleID
+rownames(map) <- map$SampleID
+rownames(map)
+dim(map)
+# Merge biom data object with sample metadata + tree data(this is rooted!)
+phy_tree = read_tree("data/220726_Miseq_micro_v2/merged/rooted_tree.nwk")
+phy_notrim <- merge_phyloseq(bac_phylo, map, phy_tree)
+phy_notrim # 6343 OTUs (asv)
+
+lab <- c('Barneveld2_T0', 'Barneveld2_T9_H0', 'Barneveld2_T9_H0_CHL', 'Barneveld2_T9_OH10', 'Barneveld2_T9_OH10_CHL', 'LaBaghWoods1_T0', 'LaBaghWoods1_T9_H0', 'LaBaghWoods1_T9_H0_CHL', 'LaBaghWoods1_T9_OH8', 'LaBaghWoods1_T9_OH8_CHL', 'PMA_Barneveld2_T0', 'PMA_Barneveld2_T9_H0', 'PMA_Barneveld2_T9_H0_CHL', 'PMA_Barneveld2_T9_OH10', 'PMA_Barneveld2_T9_OH10_CHL', 'Negative', 'Positive')
+
+sample_data(phy_notrim)$Sample_name <- factor(sample_data(phy_notrim)$Sample_name, levels =lab)
+
+
+## 2. Import "after file"
+
+# We can then load the biom file with phyloseq function import_biom. We extract the OTU table with OTU abundances and the taxonomy table from the resulting phyloseq object.
+bac_phylo=import_biom("data/220726_Miseq_micro_v2/primer_trimmed/asv_table_final.biom")
+
+# in metadata erase # (This step is essential)
+map <- read.table(file = 'data/220726_Miseq_micro_v2/primer_trimmed/sample_metadata_without_hashtag.tsv', sep = '\t', header = TRUE)
+map <- sample_data(map)
+
+# Assign rownames to be Sample ID's
+map$SampleID
+rownames(map) <- map$SampleID
+rownames(map)
+dim(map)
+# Merge biom data object with sample metadata + tree data(this is rooted!)
+phy_tree = read_tree("data/220726_Miseq_micro_v2/primer_trimmed/rooted_tree.nwk")
+phy_trimmed <- merge_phyloseq(bac_phylo, map, phy_tree)
+phy_trimmed # 1527 OTUs (asv)
+
+sample_data(phy_trimmed)$Sample_name <- factor(sample_data(phy_trimmed)$Sample_name, levels =lab)
+
+
+## 2.1. Import "after merged & trimmed file"
+# We can then load the biom file with phyloseq function import_biom. We extract the OTU table with OTU abundances and the taxonomy table from the resulting phyloseq object.
+bac_phylo=import_biom("data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged/asv_table_final.biom")
+# in metadata erase # (This step is essential)
+map <- read.table(file = 'data/220726_Miseq_micro_v2/primer_trimmed/sample_metadata_without_hashtag.tsv', sep = '\t', header = TRUE)
+map <- sample_data(map)
+# Assign rownames to be Sample ID's
+map$SampleID
+rownames(map) <- map$SampleID
+rownames(map)
+dim(map)
+# Merge biom data object with sample metadata + tree data(this is rooted!)
+phy_tree = read_tree("data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged/rooted_tree.nwk")
+phy_mergetrimmed <- merge_phyloseq(bac_phylo, map, phy_tree)
+phy_mergetrimmed # 3709 OTUs (asv)
+sample_data(phy_mergetrimmed)$Sample_name <- factor(sample_data(phy_mergetrimmed)$Sample_name, levels =lab)
+
+## 2.2. Import "after merged + unmerged & trimmed file"
+# We can then load the biom file with phyloseq function import_biom. We extract the OTU table with OTU abundances and the taxonomy table from the resulting phyloseq object.
+bac_phylo=import_biom("data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged_unmerged/asv_table_final.biom")
+# in metadata erase # (This step is essential)
+map <- read.table(file = 'data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged_unmerged/sample_metadata_without_hashtag.tsv', sep = '\t', header = TRUE)
+map <- sample_data(map)
+# Assign rownames to be Sample ID's
+map$SampleID
+rownames(map) <- map$SampleID
+rownames(map)
+dim(map)
+# Merge biom data object with sample metadata + tree data(this is rooted!)
+phy_tree = read_tree("data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged_unmerged/rooted_tree.nwk")
+phy_mut <- merge_phyloseq(bac_phylo, map, phy_tree)
+phy_mut # 18304 asv 117 samples
+sample_data(phy_mut)$Sample_name <- factor(sample_data(phy_mut)$Sample_name, levels =lab)  # 18304
+
+
+## how many reads per sample
+# 1. no trim (before)
+df_phy_notrim <- psmelt(phy_notrim)
+
+df_phy_abun_notrim <- df_phy_notrim %>% group_by(SampleID, Sample_name, Replicate) %>% summarise(Total=sum(Abundance))
+
+# plot usable reads
+df_phy_abun_notrim
+df_phy_abun_notrim$Replicate <- factor(df_phy_abun_notrim$Replicate)
+
+ggplot(df_phy_abun_notrim, aes(x=Sample_name, y=Total, fill=Replicate)) +  ## I put fill=value which was wrong
+  geom_bar(stat="identity", position = "dodge") +
+  # scale_fill_brewer(palette='Set2') +
+  xlab("Sample") +
+  ylab("Number of sequence reads \n") +
+  ggtitle("Sequence Depth per sample (No trim)")+
+  mytheme_2d +
+  theme(axis.text.x = element_text(hjust = 1, vjust=0.95,angle=40,size=13,face="bold", colour = 'black'))
+
+# 2. trimmed (after)
+df_phy_trimmed <- psmelt(phy_trimmed)
+
+df_phy_abun_trimmed <- df_phy_trimmed %>% group_by(SampleID, Sample_name, Replicate) %>% summarise(Total=sum(Abundance))
+
+# plot usable reads
+df_phy_abun_trimmed
+df_phy_abun_trimmed$Replicate <- factor(df_phy_abun_trimmed$Replicate)
+
+ggplot(df_phy_abun_trimmed, aes(x=Sample_name, y=Total, fill=Replicate)) +  ## I put fill=value which was wrong
+  geom_bar(stat="identity", position = "dodge") +
+  # scale_fill_brewer(palette='Set2') +
+  xlab("Sample") +
+  ylab("Number of sequence reads \n") +
+  ggtitle("Sequence Depth per sample (Adapter & primer trimmed)")+
+  mytheme_2d +
+  theme(axis.text.x = element_text(hjust = 1, vjust=0.95,angle=40,size=13,face="bold", colour = 'black'))
+
+# 2.1. merge & trimmed (after)
+df_phy_mergetrimmed <- psmelt(phy_mergetrimmed)
+
+df_phy_abun_mergetrimmed <- df_phy_mergetrimmed %>% group_by(SampleID, Sample_name, Replicate) %>% summarise(Total=sum(Abundance))
+
+# plot usable reads
+df_phy_abun_mergetrimmed
+df_phy_abun_mergetrimmed$Replicate <- factor(df_phy_abun_mergetrimmed$Replicate)
+
+ggplot(df_phy_abun_mergetrimmed, aes(x=Sample_name, y=Total, fill=Replicate)) +  ## I put fill=value which was wrong
+  geom_bar(stat="identity", position = "dodge") +
+  # scale_fill_brewer(palette='Set2') +
+  xlab("Sample") +
+  ylab("Number of sequence reads \n") +
+  ggtitle("Sequence Depth per sample (merged & adapter/primer rimmed)")+
+  mytheme_2d +
+  theme(axis.text.x = element_text(hjust = 1, vjust=0.95,angle=40,size=13,face="bold", colour = 'black'))
+
+
+
+# 2.2. merge + unmerged & trimmed (after)
+df_phy_mut <- psmelt(phy_mut)
+head(df_phy_mut)
+
+# I'll divide the number by 2, if it is just forward or reverse reads
+df_phy_mut$Abundance <- ifelse(grepl("forward|reverse",df_phy_mut$SampleID), df_phy_mut$Abundance / 2 ,df_phy_mut$Abundance)
+head(df_phy_mut)
+
+df_phy_abun_mut <- df_phy_mut %>% group_by(ReplicateID, Sample_name, Replicate) %>% summarise(Total=sum(Abundance))
+
+# plot usable reads
+df_phy_abun_mut
+df_phy_abun_mut$Replicate <- factor(df_phy_abun_mut$Replicate)
+
+ggplot(df_phy_abun_mut, aes(x=Sample_name, y=Total, fill=Replicate)) +  ## I put fill=value which was wrong
+  geom_bar(stat="identity", position = "dodge") +
+  # scale_fill_brewer(palette='Set2') +
+  xlab("Sample") +
+  ylab("Number of sequence reads \n") +
+  ggtitle("Sequence Depth per sample (merged + unmerged & adapter/primer rimmed)")+
+  mytheme_2d +
+  theme(axis.text.x = element_text(hjust = 1, vjust=0.95,angle=40,size=13,face="bold", colour = 'black'))
+
+```
+
+
+## Now let's compare sequence length distribution & abundance
+
+```{r}
+## Import the sequence length tsv
+tsv_notrim <- read_tsv("data/220726_Miseq_micro_v2/asv_length_pear_merged_no_trim.tsv", col_names = F) %>% rename(ASV = X1, Length = X2)
+tsv_trimmed <- read_tsv("data/220726_Miseq_micro_v2/asv_length_primer_trimmed.tsv", col_names = F) %>% rename(ASV = X1, Length = X2)
+tsv_mergetrimmed <- read_tsv("data/220726_Miseq_micro_v2/asv_length_merged_primer_trimmed.tsv", col_names = F) %>% rename(ASV = X1, Length = X2)
+tsv_mut <- read_tsv("data/220726_Miseq_micro_v2/asv_length_merged_unmerged_primer_trimmed.tsv", col_names = F) %>% rename(ASV = X1, Length = X2)
+
+## merge with otu (asv) file
+# 1. before: no trim
+df_notrim <- df_phy_notrim %>% select(OTU, Sample, Abundance, Replicate) %>% group_by(OTU) %>% summarise(Frequency=sum(Abundance)) %>% rename(ASV = OTU) %>% left_join(tsv_notrim, by=c("ASV"="ASV")) %>% ungroup()
+df_notrim_len <- df_notrim %>% group_by(Length) %>% summarize(Length_frequency = sum(Frequency)) %>% ungroup()
+
+df_notrim_len %<>% mutate(Ranges = cut(Length, seq(0, 500, 20))) %>% group_by(Ranges) %>% 
+  summarize(sums = sum(Length_frequency))
+
+ggplot(df_notrim_len, aes(x=Ranges, y=sums)) +
+  geom_bar(stat="identity", fill = "darkgreen", alpha = 0.5) +
+  xlab("\n Asv sequence length") +
+  ylab("Total read count (all samples combined) \n") +
+  ggtitle("Read length distribution (Before adapter & primer trimmed)") +
+  mytheme_2d
+
+# 2. after: trimmed
+df_trimmed <- df_phy_trimmed %>% select(OTU, Sample, Abundance, Replicate) %>% group_by(OTU) %>% summarise(Frequency=sum(Abundance)) %>% rename(ASV = OTU) %>% left_join(tsv_trimmed, by=c("ASV"="ASV")) %>% ungroup()
+df_trimmed_len <- df_trimmed %>% group_by(Length) %>% summarize(Length_frequency = sum(Frequency)) %>% ungroup()
+
+df_trimmed_len %<>% mutate(Ranges = cut(Length, seq(0, 500, 20))) %>% group_by(Ranges) %>% 
+  summarize(sums = sum(Length_frequency))
+
+ggplot(df_trimmed_len, aes(x=Ranges, y=sums)) +
+  geom_bar(stat="identity", fill = "purple", alpha = 0.5) +
+  xlab("\n Asv sequence length") +
+  ylab("Total read count (all samples combined) \n") +
+  ggtitle("Read length distribution (After adapter & primer trimmed)") +
+  mytheme_2d
+
+# 2.1. after: merge & trimmed
+df_mergetrimmed <- df_phy_mergetrimmed %>% select(OTU, Sample, Abundance, Replicate) %>% group_by(OTU) %>% summarise(Frequency=sum(Abundance)) %>% rename(ASV = OTU) %>% left_join(tsv_mergetrimmed, by=c("ASV"="ASV")) %>% ungroup()
+df_mergetrimmed_len <- df_mergetrimmed %>% group_by(Length) %>% summarize(Length_frequency = sum(Frequency)) %>% ungroup()
+
+df_mergetrimmed_len %<>% mutate(Ranges = cut(Length, seq(0, 500, 20))) %>% group_by(Ranges) %>% 
+  summarize(sums = sum(Length_frequency))
+
+ggplot(df_mergetrimmed_len, aes(x=Ranges, y=sums)) +
+  geom_bar(stat="identity", fill = "red", alpha = 0.5) +
+  xlab("\n Asv sequence length") +
+  ylab("Total read count (all samples combined) \n") +
+  ggtitle("Read length distribution (After merged & adapter/primer trimmed)") +
+  mytheme_2d
+
+
+# 2.2. after: merge + unmerged & trimmed
+
+df_phy_mut <- psmelt(phy_mut)
+head(df_phy_mut)
+
+# I'll divide the number by 2, if it is just forward or reverse reads
+df_mut <- df_phy_mut %>% select(OTU, Sample, Abundance, Replicate) %>% group_by(OTU) %>% summarise(Frequency=sum(Abundance)) %>% rename(ASV = OTU) %>% left_join(tsv_mut, by=c("ASV"="ASV")) %>% ungroup()
+df_mut_len <- df_mut %>% group_by(Length) %>% summarize(Length_frequency = sum(Frequency)) %>% ungroup()
+
+df_mut_len %<>% mutate(Ranges = cut(Length, seq(0, 500, 20))) %>% group_by(Ranges) %>% 
+  summarize(sums = sum(Length_frequency))
+
+ggplot(df_mut_len, aes(x=Ranges, y=sums)) +
+  geom_bar(stat="identity", fill = "orange", alpha = 0.5) +
+  xlab("\n Asv sequence length") +
+  ylab("Total read count (all samples combined) \n") +
+  ggtitle("Read length distribution (After merged + unmerged & adapter/primer trimmed)") +
+  mytheme_2d
+
+
+
+
+
+
+```
+
+
+
+
+
+
