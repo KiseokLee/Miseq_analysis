@@ -1,7 +1,7 @@
-name: "Miseq_analysis"
+name: Miseq_analysis
 output_dir: ../docs
 navbar:
-  title: "Miseq_analysis"
+  title: Miseq_analysis
   left:
   - text: Home
     href: index.html
@@ -9,6 +9,10 @@ navbar:
     href: about.html
   - text: License
     href: license.html
+  right:
+  - icon: fa-github
+    text: Source code
+    href: https://github.com/KiseokUchicago/Miseq_analysis
 output:
   workflowr::wflow_html:
     toc: yes
