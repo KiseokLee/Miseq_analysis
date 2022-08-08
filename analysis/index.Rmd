@@ -8,4 +8,11 @@ editor_options:
   chunk_output_type: console
 ---
 
-Welcome to my research website.
+Miseq analysis hub for amplicon sequencing
+
+* [220728_Soil_pH_adaptation](220728_Soil_pH_adaptation.html)
+* [220805_effect_of_primer_trimming](220805_effect_of_primer_trimming.html)
+* [220807_Soil_pH_examine_new_pipeline](220807_Soil_pH_examine_new_pipeline.html)
+* [220808_Soil_pH_examine_plus_unmerged](220808_Soil_pH_examine_plus_unmerged.html)
+
+
