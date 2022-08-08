@@ -1,0 +1,1587 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Kiseok Lee" />
+
+<meta name="date" content="2022-08-05" />
+
+<title>220805_effect_of_primer_trimming</title>
+
+<script src="site_libs/header-attrs-2.14/header-attrs.js"></script>
+<script src="site_libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<style>h1 {font-size: 34px;}
+       h1.title {font-size: 38px;}
+       h2 {font-size: 30px;}
+       h3 {font-size: 24px;}
+       h4 {font-size: 18px;}
+       h5 {font-size: 16px;}
+       h6 {font-size: 12px;}
+       code {color: inherit; background-color: rgba(0, 0, 0, 0.04);}
+       pre:not([class]) { background-color: white }</style>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/font-awesome-5.1.0/css/all.css" rel="stylesheet" />
+<link href="site_libs/font-awesome-5.1.0/css/v4-shims.css" rel="stylesheet" />
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/master/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+details > summary > p:only-child {
+  display: inline;
+}
+pre code {
+  padding: 0;
+}
+</style>
+
+
+<style type="text/css">
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #adb5bd;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script type="text/javascript">
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.tab('show');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+
+  // Navbar adjustments
+  var navHeight = $(".navbar").first().height() + 15;
+  var style = document.createElement('style');
+  var pt = "padding-top: " + navHeight + "px; ";
+  var mt = "margin-top: -" + navHeight + "px; ";
+  var css = "";
+  // offset scroll position for anchor links (for fixed navbar)
+  for (var i = 1; i <= 6; i++) {
+    css += ".section h" + i + "{ " + pt + mt + "}\n";
+  }
+  style.innerHTML = "body {" + pt + "padding-bottom: 40px; }\n" + css;
+  document.head.appendChild(style);
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-bs-toggle="collapse" data-target="#navbar" data-bs-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">Miseq_analysis</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="about.html">About</a>
+</li>
+<li>
+  <a href="license.html">License</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        <li>
+  <a href="https://github.com/KiseokLee/Miseq_analysis">
+    <span class="fa fa-github"></span>
+     
+    Source code
+  </a>
+</li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div id="header">
+
+
+
+<h1 class="title toc-ignore">220805_effect_of_primer_trimming</h1>
+<h4 class="author">Kiseok Lee</h4>
+<h4 class="date">2022-08-05</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span>
+workflowr <span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2022-08-08
+</p>
+<p>
+<strong>Checks:</strong> <span
+class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7
+<span class="glyphicon glyphicon-exclamation-sign text-danger"
+aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong> <code>Miseq_analysis/</code> <span
+class="glyphicon glyphicon-question-sign" aria-hidden="true"
+title="This is the local directory in which the code in this file was executed.">
+</span>
+</p>
+<p>
+This reproducible <a href="http://rmarkdown.rstudio.com">R Markdown</a>
+analysis was created with <a
+  href="https://github.com/jdblischak/workflowr">workflowr</a> (version
+1.6.2). The <em>Checks</em> tab describes the reproducibility checks
+that were applied when the results were created. The <em>Past
+versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date
+</a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git
+repository, you know the exact version of the code that produced these
+results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the
+global environment can affect the analysis in your R Markdown file in
+unknown ways. For reproduciblity it’s best to always run the code in an
+empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20220728code">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Seed:</strong>
+<code>set.seed(20220728)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20220728code"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20220728)</code> was run prior to running
+the code in the R Markdown file. Setting a seed ensures that any results
+that rely on randomness, e.g. subsampling or permutations, are
+reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Session information:</strong>
+recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package
+versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be
+confident that you successfully produced the results during this
+run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr
+project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomKiseokLeeMiseqanalysistree8b17cd3cd520a1ce58c2d1e900f6e306cceed629targetblank8b17cd3a">
+<span class="glyphicon glyphicon-ok text-success"
+aria-hidden="true"></span> <strong>Repository version:</strong>
+<a href="https://github.com/KiseokLee/Miseq_analysis/tree/8b17cd3cd520a1ce58c2d1e900f6e306cceed629" target="_blank">8b17cd3</a>
+</a>
+</p>
+</div>
+<div
+id="strongRepositoryversionstrongahrefhttpsgithubcomKiseokLeeMiseqanalysistree8b17cd3cd520a1ce58c2d1e900f6e306cceed629targetblank8b17cd3a"
+class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development
+and connecting the code version to the results is critical for
+reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version
+<a href="https://github.com/KiseokLee/Miseq_analysis/tree/8b17cd3cd520a1ce58c2d1e900f6e306cceed629" target="_blank">8b17cd3</a>.
+See the <em>Past versions</em> tab to see a history of the changes made
+to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for
+the analysis have been committed to Git prior to generating the results
+(you can use <code>wflow_publish</code> or
+<code>wflow_git_commit</code>). workflowr only checks the R Markdown
+file, but you know if there are other scripts or data files that it
+depends on. Below is the status of the Git repository when the results
+were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .Rhistory
+    Ignored:    .Rproj.user/
+
+Untracked files:
+    Untracked:  Rplot.pdf
+    Untracked:  Rplot01.pdf
+    Untracked:  data/220726_Miseq_micro_v2/
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not
+included in this status report because it is ok for generated content to
+have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+
+<p>
+These are the previous versions of the repository in which changes were
+made to the R Markdown
+(<code>analysis/220805_effect_of_primer_trimming.Rmd</code>) and HTML
+(<code>docs/220805_effect_of_primer_trimming.html</code>) files. If
+you’ve configured a remote Git repository (see
+<code>?wflow_git_remote</code>), click on the hyperlinks in the table
+below to view the files as they were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/KiseokLee/Miseq_analysis/blob/8b17cd3cd520a1ce58c2d1e900f6e306cceed629/analysis/220805_effect_of_primer_trimming.Rmd" target="_blank">8b17cd3</a>
+</td>
+<td>
+Kiseok Lee
+</td>
+<td>
+2022-08-08
+</td>
+<td>
+wflow_publish("analysis/*.Rmd")
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="effect-of-primer-trimming" class="section level2">
+<h2>effect of primer trimming</h2>
+<p>Researcher &amp; Analysis: <strong>Kiseok Lee</strong><br />
+Experiment Date: 6/10/22 - 6/17/22 (5 day each)<br />
+Analysis Date: 8/5/21<br />
+Lab: <strong>Seppe Kuehn</strong> at UChicago<br />
+</p>
+</div>
+<div id="import-libraries-and-setup" class="section level2">
+<h2>Import libraries and setup</h2>
+<pre class="r"><code># libraries
+library(phyloseq)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(vegan)
+library(tidyverse)
+library(magrittr)
+library(readxl)
+library(reshape2)
+library(gtools)
+library(devtools)
+library(openxlsx)
+library(ape)
+library(stringr)
+library(tidyr)
+library(ggrepel)
+library(ggpubr)
+library(scales)
+require(gridExtra)
+library(grid)
+library(agricolae)
+
+library(BiocManager)
+
+
+# do I need these?
+#library(seqtime)
+# BiocManager::install(&quot;seqtime&quot;)
+library(metagenomeSeq)
+# BiocManager::install(&quot;metagenomeSeq&quot;, version = &quot;3.12&quot;)
+
+
+# color collection
+my_color_collection &lt;- c(
+  &quot;#CBD588&quot;, &quot;#5F7FC7&quot;, &quot;orange&quot;, &quot;#AD6F3B&quot;, &quot;#673770&quot;, 
+  &quot;#D14285&quot;, &quot;#652926&quot;, &quot;#C84248&quot;, &quot;#8569D5&quot;, &quot;#5E738F&quot;,
+  &quot;#D1A33D&quot;, &quot;#8A7C64&quot;, &quot;#599861&quot;,&quot;#616163&quot;, &quot;#FFCDB2&quot;,
+  &quot;#6D9F71&quot;, &quot;#242F40&quot;,
+  &quot;#CCA43B&quot;, &quot;#F92A82&quot;, &quot;#ED7B84&quot;, &quot;#7EB77F&quot;, 
+  &quot;#DEC4A1&quot;, &quot;#E5D1D0&quot;, &#39;#0E8482&#39;, &#39;#C9DAEA&#39;, &#39;#337357&#39;, 
+  &#39;#95C623&#39;, &#39;#E55812&#39;, &#39;#04471C&#39;, &#39;#F2D7EE&#39;, &#39;#D3BCC0&#39;, 
+  &#39;#A5668B&#39;, &#39;#69306D&#39;, &#39;#0E103D&#39;, &#39;#1A535C&#39;, &#39;#4ECDC4&#39;, 
+  &#39;#F7FFF7&#39;, &#39;#FF6B6B&#39;, &#39;#FFE66D&#39;, &#39;#6699CC&#39;, &#39;#FFF275&#39;, 
+  &#39;#FF8C42&#39;, &#39;#FF3C38&#39;, &#39;#A23E48&#39;, &#39;#000000&#39;, &#39;#CF5C36&#39;, 
+  &#39;#EEE5E9&#39;, &#39;#7C7C7C&#39;, &#39;#EFC88B&#39;, &#39;#2E5266&#39;, &#39;#6E8898&#39;, 
+  &#39;#9FB1BC&#39;, &#39;#D3D0CB&#39;, &#39;#E2C044&#39;, &#39;#5BC0EB&#39;, &#39;#FDE74C&#39;, 
+  &#39;#9BC53D&#39;, &#39;#E55934&#39;, &#39;#FA7921&#39;, &quot;#CD9BCD&quot;, &quot;#508578&quot;, &quot;#DA5724&quot;)
+
+## theme for ggplot
+mytheme &lt;- theme_bw() + 
+  theme(text = element_text(face=&quot;bold&quot;, colour = &#39;black&#39;),
+        plot.title = element_text(size = 19,hjust = 0.5,face=&quot;bold&quot;, colour = &#39;black&#39;),
+        axis.title.x = element_text(size = 17,hjust = 0.5,face=&quot;bold&quot;, colour = &#39;black&#39;),
+        axis.title.y = element_text(size = 17,hjust = 0.5,face=&quot;bold&quot;, colour = &#39;black&#39;),
+        axis.text.x = element_text(hjust = 0.5, vjust=0.3,size=13,face=&quot;bold&quot;, colour = &#39;black&#39;),
+        axis.text.y = element_text(size=13,face=&quot;bold&quot;, colour = &#39;black&#39;),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),panel.background=element_blank(),panel.border=element_blank(),plot.background=element_blank(),
+        axis.ticks = element_line(size = 1.1),
+        legend.text=element_text(size=10,face=&quot;bold&quot;, colour = &#39;black&#39;))
+
+mytheme_2d &lt;- theme_bw() +
+  theme(text = element_text(face=&quot;bold&quot;, colour = &#39;black&#39;),
+        plot.title = element_text(size = 19,hjust = 0.5,face=&quot;bold&quot;, colour = &#39;black&#39;),
+        axis.title.x = element_text(size = 17,hjust = 0.5,face=&quot;bold&quot;, colour = &#39;black&#39;),
+        axis.title.y = element_text(size = 17,hjust = 0.5,face=&quot;bold&quot;, colour = &#39;black&#39;),
+        axis.text.x = element_text(hjust = 0.5, vjust=0.3,size=13,face=&quot;bold&quot;, colour = &#39;black&#39;),
+        axis.text.y = element_text(size=13,face=&quot;bold&quot;, colour = &#39;black&#39;),
+        axis.ticks = element_line(size = 1.1),
+        legend.text=element_text(size=10,face=&quot;bold&quot;, colour = &#39;black&#39;),
+        # panel.grid.major = element_blank(),
+        panel.background=element_blank(),plot.background=element_blank()
+        )
+  # theme(panel.grid.major = element_blank()) +
+  # theme(panel.grid.minor = element_blank(),panel.background=element_blank(),plot.background=element_blank())
+
+
+# for git push, use this instead of using wflow_git_push()
+# git push -u origin master (in the Git app / in the working directory)
+
+# for making pdf file
+# library(rmarkdown)
+# render(&quot;analysis/~~.Rmd&quot;, &quot;pdf_document&quot;)</code></pre>
+</div>
+<div id="import-biom-file" class="section level2">
+<h2>Import biom file</h2>
+<p>Before: pear merge, no trimming of adapter and primer After: trim
+primer then dada2 denoise-paired</p>
+<pre class="r"><code>## 1. Import &quot;before file&quot;
+
+# We can then load the biom file with phyloseq function import_biom. We extract the OTU table with OTU abundances and the taxonomy table from the resulting phyloseq object.
+bac_phylo=import_biom(&quot;data/220726_Miseq_micro_v2/merged/asv_table_final.biom&quot;)
+
+# in metadata erase # (This step is essential)
+map &lt;- read.table(file = &#39;data/220726_Miseq_micro_v2/merged/sample_metadata_without_hashtag.tsv&#39;, sep = &#39;\t&#39;, header = TRUE)
+map &lt;- sample_data(map)
+
+# Assign rownames to be Sample ID&#39;s
+map$SampleID</code></pre>
+<pre><code> [1] &quot;SampleA1&quot;  &quot;SampleA14&quot; &quot;SampleA26&quot; &quot;SampleA38&quot; &quot;SampleA50&quot; &quot;SampleA62&quot;
+ [7] &quot;SampleA74&quot; &quot;SampleA86&quot; &quot;SampleA3&quot;  &quot;SampleA15&quot; &quot;SampleA27&quot; &quot;SampleA13&quot;
+[13] &quot;SampleA39&quot; &quot;SampleA51&quot; &quot;SampleA63&quot; &quot;SampleA75&quot; &quot;SampleA87&quot; &quot;SampleA4&quot; 
+[19] &quot;SampleA16&quot; &quot;SampleA28&quot; &quot;SampleA40&quot; &quot;SampleA52&quot; &quot;SampleA25&quot; &quot;SampleA64&quot;
+[25] &quot;SampleA76&quot; &quot;SampleA88&quot; &quot;SampleA5&quot;  &quot;SampleA17&quot; &quot;SampleA29&quot; &quot;SampleA41&quot;
+[31] &quot;SampleA53&quot; &quot;SampleA65&quot; &quot;SampleA77&quot; &quot;SampleA37&quot; &quot;SampleA49&quot; &quot;SampleA61&quot;
+[37] &quot;SampleA73&quot; &quot;SampleA85&quot; &quot;SampleA2&quot; </code></pre>
+<pre class="r"><code>rownames(map) &lt;- map$SampleID
+rownames(map)</code></pre>
+<pre><code> [1] &quot;SampleA1&quot;  &quot;SampleA14&quot; &quot;SampleA26&quot; &quot;SampleA38&quot; &quot;SampleA50&quot; &quot;SampleA62&quot;
+ [7] &quot;SampleA74&quot; &quot;SampleA86&quot; &quot;SampleA3&quot;  &quot;SampleA15&quot; &quot;SampleA27&quot; &quot;SampleA13&quot;
+[13] &quot;SampleA39&quot; &quot;SampleA51&quot; &quot;SampleA63&quot; &quot;SampleA75&quot; &quot;SampleA87&quot; &quot;SampleA4&quot; 
+[19] &quot;SampleA16&quot; &quot;SampleA28&quot; &quot;SampleA40&quot; &quot;SampleA52&quot; &quot;SampleA25&quot; &quot;SampleA64&quot;
+[25] &quot;SampleA76&quot; &quot;SampleA88&quot; &quot;SampleA5&quot;  &quot;SampleA17&quot; &quot;SampleA29&quot; &quot;SampleA41&quot;
+[31] &quot;SampleA53&quot; &quot;SampleA65&quot; &quot;SampleA77&quot; &quot;SampleA37&quot; &quot;SampleA49&quot; &quot;SampleA61&quot;
+[37] &quot;SampleA73&quot; &quot;SampleA85&quot; &quot;SampleA2&quot; </code></pre>
+<pre class="r"><code>dim(map)</code></pre>
+<pre><code>[1] 39 12</code></pre>
+<pre class="r"><code># Merge biom data object with sample metadata + tree data(this is rooted!)
+phy_tree = read_tree(&quot;data/220726_Miseq_micro_v2/merged/rooted_tree.nwk&quot;)
+phy_notrim &lt;- merge_phyloseq(bac_phylo, map, phy_tree)
+phy_notrim # 6343 OTUs (asv)</code></pre>
+<pre><code>phyloseq-class experiment-level object
+otu_table()   OTU Table:         [ 6343 taxa and 39 samples ]
+sample_data() Sample Data:       [ 39 samples by 12 sample variables ]
+tax_table()   Taxonomy Table:    [ 6343 taxa by 7 taxonomic ranks ]
+phy_tree()    Phylogenetic Tree: [ 6343 tips and 6342 internal nodes ]</code></pre>
+<pre class="r"><code>lab &lt;- c(&#39;Barneveld2_T0&#39;, &#39;Barneveld2_T9_H0&#39;, &#39;Barneveld2_T9_H0_CHL&#39;, &#39;Barneveld2_T9_OH10&#39;, &#39;Barneveld2_T9_OH10_CHL&#39;, &#39;LaBaghWoods1_T0&#39;, &#39;LaBaghWoods1_T9_H0&#39;, &#39;LaBaghWoods1_T9_H0_CHL&#39;, &#39;LaBaghWoods1_T9_OH8&#39;, &#39;LaBaghWoods1_T9_OH8_CHL&#39;, &#39;PMA_Barneveld2_T0&#39;, &#39;PMA_Barneveld2_T9_H0&#39;, &#39;PMA_Barneveld2_T9_H0_CHL&#39;, &#39;PMA_Barneveld2_T9_OH10&#39;, &#39;PMA_Barneveld2_T9_OH10_CHL&#39;, &#39;Negative&#39;, &#39;Positive&#39;)
+
+sample_data(phy_notrim)$Sample_name &lt;- factor(sample_data(phy_notrim)$Sample_name, levels =lab)
+
+
+## 2. Import &quot;after file&quot;
+
+# We can then load the biom file with phyloseq function import_biom. We extract the OTU table with OTU abundances and the taxonomy table from the resulting phyloseq object.
+bac_phylo=import_biom(&quot;data/220726_Miseq_micro_v2/primer_trimmed/asv_table_final.biom&quot;)
+
+# in metadata erase # (This step is essential)
+map &lt;- read.table(file = &#39;data/220726_Miseq_micro_v2/primer_trimmed/sample_metadata_without_hashtag.tsv&#39;, sep = &#39;\t&#39;, header = TRUE)
+map &lt;- sample_data(map)
+
+# Assign rownames to be Sample ID&#39;s
+map$SampleID</code></pre>
+<pre><code> [1] &quot;SampleA1&quot;  &quot;SampleA14&quot; &quot;SampleA26&quot; &quot;SampleA38&quot; &quot;SampleA50&quot; &quot;SampleA62&quot;
+ [7] &quot;SampleA74&quot; &quot;SampleA86&quot; &quot;SampleA3&quot;  &quot;SampleA15&quot; &quot;SampleA27&quot; &quot;SampleA13&quot;
+[13] &quot;SampleA39&quot; &quot;SampleA51&quot; &quot;SampleA63&quot; &quot;SampleA75&quot; &quot;SampleA87&quot; &quot;SampleA4&quot; 
+[19] &quot;SampleA16&quot; &quot;SampleA28&quot; &quot;SampleA40&quot; &quot;SampleA52&quot; &quot;SampleA25&quot; &quot;SampleA64&quot;
+[25] &quot;SampleA76&quot; &quot;SampleA88&quot; &quot;SampleA5&quot;  &quot;SampleA17&quot; &quot;SampleA29&quot; &quot;SampleA41&quot;
+[31] &quot;SampleA53&quot; &quot;SampleA65&quot; &quot;SampleA77&quot; &quot;SampleA37&quot; &quot;SampleA49&quot; &quot;SampleA61&quot;
+[37] &quot;SampleA73&quot; &quot;SampleA85&quot; &quot;SampleA2&quot; </code></pre>
+<pre class="r"><code>rownames(map) &lt;- map$SampleID
+rownames(map)</code></pre>
+<pre><code> [1] &quot;SampleA1&quot;  &quot;SampleA14&quot; &quot;SampleA26&quot; &quot;SampleA38&quot; &quot;SampleA50&quot; &quot;SampleA62&quot;
+ [7] &quot;SampleA74&quot; &quot;SampleA86&quot; &quot;SampleA3&quot;  &quot;SampleA15&quot; &quot;SampleA27&quot; &quot;SampleA13&quot;
+[13] &quot;SampleA39&quot; &quot;SampleA51&quot; &quot;SampleA63&quot; &quot;SampleA75&quot; &quot;SampleA87&quot; &quot;SampleA4&quot; 
+[19] &quot;SampleA16&quot; &quot;SampleA28&quot; &quot;SampleA40&quot; &quot;SampleA52&quot; &quot;SampleA25&quot; &quot;SampleA64&quot;
+[25] &quot;SampleA76&quot; &quot;SampleA88&quot; &quot;SampleA5&quot;  &quot;SampleA17&quot; &quot;SampleA29&quot; &quot;SampleA41&quot;
+[31] &quot;SampleA53&quot; &quot;SampleA65&quot; &quot;SampleA77&quot; &quot;SampleA37&quot; &quot;SampleA49&quot; &quot;SampleA61&quot;
+[37] &quot;SampleA73&quot; &quot;SampleA85&quot; &quot;SampleA2&quot; </code></pre>
+<pre class="r"><code>dim(map)</code></pre>
+<pre><code>[1] 39 12</code></pre>
+<pre class="r"><code># Merge biom data object with sample metadata + tree data(this is rooted!)
+phy_tree = read_tree(&quot;data/220726_Miseq_micro_v2/primer_trimmed/rooted_tree.nwk&quot;)
+phy_trimmed &lt;- merge_phyloseq(bac_phylo, map, phy_tree)
+phy_trimmed # 1527 OTUs (asv)</code></pre>
+<pre><code>phyloseq-class experiment-level object
+otu_table()   OTU Table:         [ 1527 taxa and 39 samples ]
+sample_data() Sample Data:       [ 39 samples by 12 sample variables ]
+tax_table()   Taxonomy Table:    [ 1527 taxa by 7 taxonomic ranks ]
+phy_tree()    Phylogenetic Tree: [ 1527 tips and 1524 internal nodes ]</code></pre>
+<pre class="r"><code>sample_data(phy_trimmed)$Sample_name &lt;- factor(sample_data(phy_trimmed)$Sample_name, levels =lab)
+
+
+## 2.1. Import &quot;after merged &amp; trimmed file&quot;
+# We can then load the biom file with phyloseq function import_biom. We extract the OTU table with OTU abundances and the taxonomy table from the resulting phyloseq object.
+bac_phylo=import_biom(&quot;data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged/asv_table_final.biom&quot;)
+# in metadata erase # (This step is essential)
+map &lt;- read.table(file = &#39;data/220726_Miseq_micro_v2/primer_trimmed/sample_metadata_without_hashtag.tsv&#39;, sep = &#39;\t&#39;, header = TRUE)
+map &lt;- sample_data(map)
+# Assign rownames to be Sample ID&#39;s
+map$SampleID</code></pre>
+<pre><code> [1] &quot;SampleA1&quot;  &quot;SampleA14&quot; &quot;SampleA26&quot; &quot;SampleA38&quot; &quot;SampleA50&quot; &quot;SampleA62&quot;
+ [7] &quot;SampleA74&quot; &quot;SampleA86&quot; &quot;SampleA3&quot;  &quot;SampleA15&quot; &quot;SampleA27&quot; &quot;SampleA13&quot;
+[13] &quot;SampleA39&quot; &quot;SampleA51&quot; &quot;SampleA63&quot; &quot;SampleA75&quot; &quot;SampleA87&quot; &quot;SampleA4&quot; 
+[19] &quot;SampleA16&quot; &quot;SampleA28&quot; &quot;SampleA40&quot; &quot;SampleA52&quot; &quot;SampleA25&quot; &quot;SampleA64&quot;
+[25] &quot;SampleA76&quot; &quot;SampleA88&quot; &quot;SampleA5&quot;  &quot;SampleA17&quot; &quot;SampleA29&quot; &quot;SampleA41&quot;
+[31] &quot;SampleA53&quot; &quot;SampleA65&quot; &quot;SampleA77&quot; &quot;SampleA37&quot; &quot;SampleA49&quot; &quot;SampleA61&quot;
+[37] &quot;SampleA73&quot; &quot;SampleA85&quot; &quot;SampleA2&quot; </code></pre>
+<pre class="r"><code>rownames(map) &lt;- map$SampleID
+rownames(map)</code></pre>
+<pre><code> [1] &quot;SampleA1&quot;  &quot;SampleA14&quot; &quot;SampleA26&quot; &quot;SampleA38&quot; &quot;SampleA50&quot; &quot;SampleA62&quot;
+ [7] &quot;SampleA74&quot; &quot;SampleA86&quot; &quot;SampleA3&quot;  &quot;SampleA15&quot; &quot;SampleA27&quot; &quot;SampleA13&quot;
+[13] &quot;SampleA39&quot; &quot;SampleA51&quot; &quot;SampleA63&quot; &quot;SampleA75&quot; &quot;SampleA87&quot; &quot;SampleA4&quot; 
+[19] &quot;SampleA16&quot; &quot;SampleA28&quot; &quot;SampleA40&quot; &quot;SampleA52&quot; &quot;SampleA25&quot; &quot;SampleA64&quot;
+[25] &quot;SampleA76&quot; &quot;SampleA88&quot; &quot;SampleA5&quot;  &quot;SampleA17&quot; &quot;SampleA29&quot; &quot;SampleA41&quot;
+[31] &quot;SampleA53&quot; &quot;SampleA65&quot; &quot;SampleA77&quot; &quot;SampleA37&quot; &quot;SampleA49&quot; &quot;SampleA61&quot;
+[37] &quot;SampleA73&quot; &quot;SampleA85&quot; &quot;SampleA2&quot; </code></pre>
+<pre class="r"><code>dim(map)</code></pre>
+<pre><code>[1] 39 12</code></pre>
+<pre class="r"><code># Merge biom data object with sample metadata + tree data(this is rooted!)
+phy_tree = read_tree(&quot;data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged/rooted_tree.nwk&quot;)
+phy_mergetrimmed &lt;- merge_phyloseq(bac_phylo, map, phy_tree)
+phy_mergetrimmed # 3709 OTUs (asv)</code></pre>
+<pre><code>phyloseq-class experiment-level object
+otu_table()   OTU Table:         [ 3709 taxa and 39 samples ]
+sample_data() Sample Data:       [ 39 samples by 12 sample variables ]
+tax_table()   Taxonomy Table:    [ 3709 taxa by 7 taxonomic ranks ]
+phy_tree()    Phylogenetic Tree: [ 3709 tips and 3695 internal nodes ]</code></pre>
+<pre class="r"><code>sample_data(phy_mergetrimmed)$Sample_name &lt;- factor(sample_data(phy_mergetrimmed)$Sample_name, levels =lab)
+
+## 2.2. Import &quot;after merged + unmerged &amp; trimmed file&quot;
+# We can then load the biom file with phyloseq function import_biom. We extract the OTU table with OTU abundances and the taxonomy table from the resulting phyloseq object.
+bac_phylo=import_biom(&quot;data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged_unmerged/asv_table_final.biom&quot;)
+# in metadata erase # (This step is essential)
+map &lt;- read.table(file = &#39;data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged_unmerged/sample_metadata_without_hashtag.tsv&#39;, sep = &#39;\t&#39;, header = TRUE)
+map &lt;- sample_data(map)
+# Assign rownames to be Sample ID&#39;s
+map$SampleID</code></pre>
+<pre><code>  [1] &quot;SampleA1&quot;                   &quot;SampleA1_unmerged_forward&quot; 
+  [3] &quot;SampleA1_unmerged_reverse&quot;  &quot;SampleA2&quot;                  
+  [5] &quot;SampleA2_unmerged_forward&quot;  &quot;SampleA2_unmerged_reverse&quot; 
+  [7] &quot;SampleA3&quot;                   &quot;SampleA3_unmerged_forward&quot; 
+  [9] &quot;SampleA3_unmerged_reverse&quot;  &quot;SampleA4&quot;                  
+ [11] &quot;SampleA4_unmerged_forward&quot;  &quot;SampleA4_unmerged_reverse&quot; 
+ [13] &quot;SampleA5&quot;                   &quot;SampleA5_unmerged_forward&quot; 
+ [15] &quot;SampleA5_unmerged_reverse&quot;  &quot;SampleA13&quot;                 
+ [17] &quot;SampleA13_unmerged_forward&quot; &quot;SampleA13_unmerged_reverse&quot;
+ [19] &quot;SampleA14&quot;                  &quot;SampleA14_unmerged_forward&quot;
+ [21] &quot;SampleA14_unmerged_reverse&quot; &quot;SampleA15&quot;                 
+ [23] &quot;SampleA15_unmerged_forward&quot; &quot;SampleA15_unmerged_reverse&quot;
+ [25] &quot;SampleA16&quot;                  &quot;SampleA16_unmerged_forward&quot;
+ [27] &quot;SampleA16_unmerged_reverse&quot; &quot;SampleA17&quot;                 
+ [29] &quot;SampleA17_unmerged_forward&quot; &quot;SampleA17_unmerged_reverse&quot;
+ [31] &quot;SampleA25&quot;                  &quot;SampleA25_unmerged_forward&quot;
+ [33] &quot;SampleA25_unmerged_reverse&quot; &quot;SampleA26&quot;                 
+ [35] &quot;SampleA26_unmerged_forward&quot; &quot;SampleA26_unmerged_reverse&quot;
+ [37] &quot;SampleA27&quot;                  &quot;SampleA27_unmerged_forward&quot;
+ [39] &quot;SampleA27_unmerged_reverse&quot; &quot;SampleA28&quot;                 
+ [41] &quot;SampleA28_unmerged_forward&quot; &quot;SampleA28_unmerged_reverse&quot;
+ [43] &quot;SampleA29&quot;                  &quot;SampleA29_unmerged_forward&quot;
+ [45] &quot;SampleA29_unmerged_reverse&quot; &quot;SampleA37&quot;                 
+ [47] &quot;SampleA37_unmerged_forward&quot; &quot;SampleA37_unmerged_reverse&quot;
+ [49] &quot;SampleA38&quot;                  &quot;SampleA38_unmerged_forward&quot;
+ [51] &quot;SampleA38_unmerged_reverse&quot; &quot;SampleA39&quot;                 
+ [53] &quot;SampleA39_unmerged_forward&quot; &quot;SampleA39_unmerged_reverse&quot;
+ [55] &quot;SampleA40&quot;                  &quot;SampleA40_unmerged_forward&quot;
+ [57] &quot;SampleA40_unmerged_reverse&quot; &quot;SampleA41&quot;                 
+ [59] &quot;SampleA41_unmerged_forward&quot; &quot;SampleA41_unmerged_reverse&quot;
+ [61] &quot;SampleA49&quot;                  &quot;SampleA49_unmerged_forward&quot;
+ [63] &quot;SampleA49_unmerged_reverse&quot; &quot;SampleA50&quot;                 
+ [65] &quot;SampleA50_unmerged_forward&quot; &quot;SampleA50_unmerged_reverse&quot;
+ [67] &quot;SampleA51&quot;                  &quot;SampleA51_unmerged_forward&quot;
+ [69] &quot;SampleA51_unmerged_reverse&quot; &quot;SampleA52&quot;                 
+ [71] &quot;SampleA52_unmerged_forward&quot; &quot;SampleA52_unmerged_reverse&quot;
+ [73] &quot;SampleA53&quot;                  &quot;SampleA53_unmerged_forward&quot;
+ [75] &quot;SampleA53_unmerged_reverse&quot; &quot;SampleA61&quot;                 
+ [77] &quot;SampleA61_unmerged_forward&quot; &quot;SampleA61_unmerged_reverse&quot;
+ [79] &quot;SampleA62&quot;                  &quot;SampleA62_unmerged_forward&quot;
+ [81] &quot;SampleA62_unmerged_reverse&quot; &quot;SampleA63&quot;                 
+ [83] &quot;SampleA63_unmerged_forward&quot; &quot;SampleA63_unmerged_reverse&quot;
+ [85] &quot;SampleA64&quot;                  &quot;SampleA64_unmerged_forward&quot;
+ [87] &quot;SampleA64_unmerged_reverse&quot; &quot;SampleA65&quot;                 
+ [89] &quot;SampleA65_unmerged_forward&quot; &quot;SampleA65_unmerged_reverse&quot;
+ [91] &quot;SampleA73&quot;                  &quot;SampleA73_unmerged_forward&quot;
+ [93] &quot;SampleA73_unmerged_reverse&quot; &quot;SampleA74&quot;                 
+ [95] &quot;SampleA74_unmerged_forward&quot; &quot;SampleA74_unmerged_reverse&quot;
+ [97] &quot;SampleA75&quot;                  &quot;SampleA75_unmerged_forward&quot;
+ [99] &quot;SampleA75_unmerged_reverse&quot; &quot;SampleA76&quot;                 
+[101] &quot;SampleA76_unmerged_forward&quot; &quot;SampleA76_unmerged_reverse&quot;
+[103] &quot;SampleA77&quot;                  &quot;SampleA77_unmerged_forward&quot;
+[105] &quot;SampleA77_unmerged_reverse&quot; &quot;SampleA85&quot;                 
+[107] &quot;SampleA85_unmerged_forward&quot; &quot;SampleA85_unmerged_reverse&quot;
+[109] &quot;SampleA86&quot;                  &quot;SampleA86_unmerged_forward&quot;
+[111] &quot;SampleA86_unmerged_reverse&quot; &quot;SampleA87&quot;                 
+[113] &quot;SampleA87_unmerged_forward&quot; &quot;SampleA87_unmerged_reverse&quot;
+[115] &quot;SampleA88&quot;                  &quot;SampleA88_unmerged_forward&quot;
+[117] &quot;SampleA88_unmerged_reverse&quot;</code></pre>
+<pre class="r"><code>rownames(map) &lt;- map$SampleID
+rownames(map)</code></pre>
+<pre><code>  [1] &quot;SampleA1&quot;                   &quot;SampleA1_unmerged_forward&quot; 
+  [3] &quot;SampleA1_unmerged_reverse&quot;  &quot;SampleA2&quot;                  
+  [5] &quot;SampleA2_unmerged_forward&quot;  &quot;SampleA2_unmerged_reverse&quot; 
+  [7] &quot;SampleA3&quot;                   &quot;SampleA3_unmerged_forward&quot; 
+  [9] &quot;SampleA3_unmerged_reverse&quot;  &quot;SampleA4&quot;                  
+ [11] &quot;SampleA4_unmerged_forward&quot;  &quot;SampleA4_unmerged_reverse&quot; 
+ [13] &quot;SampleA5&quot;                   &quot;SampleA5_unmerged_forward&quot; 
+ [15] &quot;SampleA5_unmerged_reverse&quot;  &quot;SampleA13&quot;                 
+ [17] &quot;SampleA13_unmerged_forward&quot; &quot;SampleA13_unmerged_reverse&quot;
+ [19] &quot;SampleA14&quot;                  &quot;SampleA14_unmerged_forward&quot;
+ [21] &quot;SampleA14_unmerged_reverse&quot; &quot;SampleA15&quot;                 
+ [23] &quot;SampleA15_unmerged_forward&quot; &quot;SampleA15_unmerged_reverse&quot;
+ [25] &quot;SampleA16&quot;                  &quot;SampleA16_unmerged_forward&quot;
+ [27] &quot;SampleA16_unmerged_reverse&quot; &quot;SampleA17&quot;                 
+ [29] &quot;SampleA17_unmerged_forward&quot; &quot;SampleA17_unmerged_reverse&quot;
+ [31] &quot;SampleA25&quot;                  &quot;SampleA25_unmerged_forward&quot;
+ [33] &quot;SampleA25_unmerged_reverse&quot; &quot;SampleA26&quot;                 
+ [35] &quot;SampleA26_unmerged_forward&quot; &quot;SampleA26_unmerged_reverse&quot;
+ [37] &quot;SampleA27&quot;                  &quot;SampleA27_unmerged_forward&quot;
+ [39] &quot;SampleA27_unmerged_reverse&quot; &quot;SampleA28&quot;                 
+ [41] &quot;SampleA28_unmerged_forward&quot; &quot;SampleA28_unmerged_reverse&quot;
+ [43] &quot;SampleA29&quot;                  &quot;SampleA29_unmerged_forward&quot;
+ [45] &quot;SampleA29_unmerged_reverse&quot; &quot;SampleA37&quot;                 
+ [47] &quot;SampleA37_unmerged_forward&quot; &quot;SampleA37_unmerged_reverse&quot;
+ [49] &quot;SampleA38&quot;                  &quot;SampleA38_unmerged_forward&quot;
+ [51] &quot;SampleA38_unmerged_reverse&quot; &quot;SampleA39&quot;                 
+ [53] &quot;SampleA39_unmerged_forward&quot; &quot;SampleA39_unmerged_reverse&quot;
+ [55] &quot;SampleA40&quot;                  &quot;SampleA40_unmerged_forward&quot;
+ [57] &quot;SampleA40_unmerged_reverse&quot; &quot;SampleA41&quot;                 
+ [59] &quot;SampleA41_unmerged_forward&quot; &quot;SampleA41_unmerged_reverse&quot;
+ [61] &quot;SampleA49&quot;                  &quot;SampleA49_unmerged_forward&quot;
+ [63] &quot;SampleA49_unmerged_reverse&quot; &quot;SampleA50&quot;                 
+ [65] &quot;SampleA50_unmerged_forward&quot; &quot;SampleA50_unmerged_reverse&quot;
+ [67] &quot;SampleA51&quot;                  &quot;SampleA51_unmerged_forward&quot;
+ [69] &quot;SampleA51_unmerged_reverse&quot; &quot;SampleA52&quot;                 
+ [71] &quot;SampleA52_unmerged_forward&quot; &quot;SampleA52_unmerged_reverse&quot;
+ [73] &quot;SampleA53&quot;                  &quot;SampleA53_unmerged_forward&quot;
+ [75] &quot;SampleA53_unmerged_reverse&quot; &quot;SampleA61&quot;                 
+ [77] &quot;SampleA61_unmerged_forward&quot; &quot;SampleA61_unmerged_reverse&quot;
+ [79] &quot;SampleA62&quot;                  &quot;SampleA62_unmerged_forward&quot;
+ [81] &quot;SampleA62_unmerged_reverse&quot; &quot;SampleA63&quot;                 
+ [83] &quot;SampleA63_unmerged_forward&quot; &quot;SampleA63_unmerged_reverse&quot;
+ [85] &quot;SampleA64&quot;                  &quot;SampleA64_unmerged_forward&quot;
+ [87] &quot;SampleA64_unmerged_reverse&quot; &quot;SampleA65&quot;                 
+ [89] &quot;SampleA65_unmerged_forward&quot; &quot;SampleA65_unmerged_reverse&quot;
+ [91] &quot;SampleA73&quot;                  &quot;SampleA73_unmerged_forward&quot;
+ [93] &quot;SampleA73_unmerged_reverse&quot; &quot;SampleA74&quot;                 
+ [95] &quot;SampleA74_unmerged_forward&quot; &quot;SampleA74_unmerged_reverse&quot;
+ [97] &quot;SampleA75&quot;                  &quot;SampleA75_unmerged_forward&quot;
+ [99] &quot;SampleA75_unmerged_reverse&quot; &quot;SampleA76&quot;                 
+[101] &quot;SampleA76_unmerged_forward&quot; &quot;SampleA76_unmerged_reverse&quot;
+[103] &quot;SampleA77&quot;                  &quot;SampleA77_unmerged_forward&quot;
+[105] &quot;SampleA77_unmerged_reverse&quot; &quot;SampleA85&quot;                 
+[107] &quot;SampleA85_unmerged_forward&quot; &quot;SampleA85_unmerged_reverse&quot;
+[109] &quot;SampleA86&quot;                  &quot;SampleA86_unmerged_forward&quot;
+[111] &quot;SampleA86_unmerged_reverse&quot; &quot;SampleA87&quot;                 
+[113] &quot;SampleA87_unmerged_forward&quot; &quot;SampleA87_unmerged_reverse&quot;
+[115] &quot;SampleA88&quot;                  &quot;SampleA88_unmerged_forward&quot;
+[117] &quot;SampleA88_unmerged_reverse&quot;</code></pre>
+<pre class="r"><code>dim(map)</code></pre>
+<pre><code>[1] 117  14</code></pre>
+<pre class="r"><code># Merge biom data object with sample metadata + tree data(this is rooted!)
+phy_tree = read_tree(&quot;data/220726_Miseq_micro_v2/220805_Soil_pH_adaptation_ver3/04_dada2/merged_unmerged/rooted_tree.nwk&quot;)
+phy_mut &lt;- merge_phyloseq(bac_phylo, map, phy_tree)
+phy_mut # 18304 asv 117 samples</code></pre>
+<pre><code>phyloseq-class experiment-level object
+otu_table()   OTU Table:         [ 18304 taxa and 117 samples ]
+sample_data() Sample Data:       [ 117 samples by 14 sample variables ]
+tax_table()   Taxonomy Table:    [ 18304 taxa by 7 taxonomic ranks ]
+phy_tree()    Phylogenetic Tree: [ 18304 tips and 18223 internal nodes ]</code></pre>
+<pre class="r"><code>sample_data(phy_mut)$Sample_name &lt;- factor(sample_data(phy_mut)$Sample_name, levels =lab)  # 18304
+
+
+## how many reads per sample
+# 1. no trim (before)
+df_phy_notrim &lt;- psmelt(phy_notrim)
+
+df_phy_abun_notrim &lt;- df_phy_notrim %&gt;% group_by(SampleID, Sample_name, Replicate) %&gt;% summarise(Total=sum(Abundance))
+
+# plot usable reads
+df_phy_abun_notrim</code></pre>
+<pre><code># A tibble: 39 x 4
+# Groups:   SampleID, Sample_name [39]
+   SampleID  Sample_name             Replicate Total
+   &lt;chr&gt;     &lt;fct&gt;                       &lt;int&gt; &lt;dbl&gt;
+ 1 SampleA1  Barneveld2_T0                   1  4253
+ 2 SampleA13 Barneveld2_T0                   2  4764
+ 3 SampleA14 Barneveld2_T9_OH10              1  2945
+ 4 SampleA15 LaBaghWoods1_T0                 3  5199
+ 5 SampleA16 LaBaghWoods1_T9_OH8_CHL         2  3123
+ 6 SampleA17 PMA_Barneveld2_T9_OH10          2  3297
+ 7 SampleA2  Barneveld2_T9_H0_CHL            3  3507
+ 8 SampleA25 Barneveld2_T0                   3  5950
+ 9 SampleA26 Barneveld2_T9_OH10              2  3302
+10 SampleA27 LaBaghWoods1_T9_H0              1  3328
+# ... with 29 more rows</code></pre>
+<pre class="r"><code>df_phy_abun_notrim$Replicate &lt;- factor(df_phy_abun_notrim$Replicate)
+
+ggplot(df_phy_abun_notrim, aes(x=Sample_name, y=Total, fill=Replicate)) +  ## I put fill=value which was wrong
+  geom_bar(stat=&quot;identity&quot;, position = &quot;dodge&quot;) +
+  # scale_fill_brewer(palette=&#39;Set2&#39;) +
+  xlab(&quot;Sample&quot;) +
+  ylab(&quot;Number of sequence reads \n&quot;) +
+  ggtitle(&quot;Sequence Depth per sample (No trim)&quot;)+
+  mytheme_2d +
+  theme(axis.text.x = element_text(hjust = 1, vjust=0.95,angle=40,size=13,face=&quot;bold&quot;, colour = &#39;black&#39;))</code></pre>
+<p><img src="figure/220805_effect_of_primer_trimming.Rmd/unnamed-chunk-2-1.png" width="1056" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># 2. trimmed (after)
+df_phy_trimmed &lt;- psmelt(phy_trimmed)
+
+df_phy_abun_trimmed &lt;- df_phy_trimmed %&gt;% group_by(SampleID, Sample_name, Replicate) %&gt;% summarise(Total=sum(Abundance))
+
+# plot usable reads
+df_phy_abun_trimmed</code></pre>
+<pre><code># A tibble: 39 x 4
+# Groups:   SampleID, Sample_name [39]
+   SampleID  Sample_name             Replicate Total
+   &lt;chr&gt;     &lt;fct&gt;                       &lt;int&gt; &lt;dbl&gt;
+ 1 SampleA1  Barneveld2_T0                   1    86
+ 2 SampleA13 Barneveld2_T0                   2   111
+ 3 SampleA14 Barneveld2_T9_OH10              1    89
+ 4 SampleA15 LaBaghWoods1_T0                 3    70
+ 5 SampleA16 LaBaghWoods1_T9_OH8_CHL         2    96
+ 6 SampleA17 PMA_Barneveld2_T9_OH10          2    88
+ 7 SampleA2  Barneveld2_T9_H0_CHL            3    66
+ 8 SampleA25 Barneveld2_T0                   3   227
+ 9 SampleA26 Barneveld2_T9_OH10              2   122
+10 SampleA27 LaBaghWoods1_T9_H0              1    91
+# ... with 29 more rows</code></pre>
+<pre class="r"><code>df_phy_abun_trimmed$Replicate &lt;- factor(df_phy_abun_trimmed$Replicate)
+
+ggplot(df_phy_abun_trimmed, aes(x=Sample_name, y=Total, fill=Replicate)) +  ## I put fill=value which was wrong
+  geom_bar(stat=&quot;identity&quot;, position = &quot;dodge&quot;) +
+  # scale_fill_brewer(palette=&#39;Set2&#39;) +
+  xlab(&quot;Sample&quot;) +
+  ylab(&quot;Number of sequence reads \n&quot;) +
+  ggtitle(&quot;Sequence Depth per sample (Adapter &amp; primer trimmed)&quot;)+
+  mytheme_2d +
+  theme(axis.text.x = element_text(hjust = 1, vjust=0.95,angle=40,size=13,face=&quot;bold&quot;, colour = &#39;black&#39;))</code></pre>
+<p><img src="figure/220805_effect_of_primer_trimming.Rmd/unnamed-chunk-2-2.png" width="1056" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># 2.1. merge &amp; trimmed (after)
+df_phy_mergetrimmed &lt;- psmelt(phy_mergetrimmed)
+
+df_phy_abun_mergetrimmed &lt;- df_phy_mergetrimmed %&gt;% group_by(SampleID, Sample_name, Replicate) %&gt;% summarise(Total=sum(Abundance))
+
+# plot usable reads
+df_phy_abun_mergetrimmed</code></pre>
+<pre><code># A tibble: 39 x 4
+# Groups:   SampleID, Sample_name [39]
+   SampleID  Sample_name             Replicate Total
+   &lt;chr&gt;     &lt;fct&gt;                       &lt;int&gt; &lt;dbl&gt;
+ 1 SampleA1  Barneveld2_T0                   1  4579
+ 2 SampleA13 Barneveld2_T0                   2  4927
+ 3 SampleA14 Barneveld2_T9_OH10              1  3439
+ 4 SampleA15 LaBaghWoods1_T0                 3  5336
+ 5 SampleA16 LaBaghWoods1_T9_OH8_CHL         2  3699
+ 6 SampleA17 PMA_Barneveld2_T9_OH10          2  3486
+ 7 SampleA2  Barneveld2_T9_H0_CHL            3  3908
+ 8 SampleA25 Barneveld2_T0                   3  6062
+ 9 SampleA26 Barneveld2_T9_OH10              2  3743
+10 SampleA27 LaBaghWoods1_T9_H0              1  3324
+# ... with 29 more rows</code></pre>
+<pre class="r"><code>df_phy_abun_mergetrimmed$Replicate &lt;- factor(df_phy_abun_mergetrimmed$Replicate)
+
+ggplot(df_phy_abun_mergetrimmed, aes(x=Sample_name, y=Total, fill=Replicate)) +  ## I put fill=value which was wrong
+  geom_bar(stat=&quot;identity&quot;, position = &quot;dodge&quot;) +
+  # scale_fill_brewer(palette=&#39;Set2&#39;) +
+  xlab(&quot;Sample&quot;) +
+  ylab(&quot;Number of sequence reads \n&quot;) +
+  ggtitle(&quot;Sequence Depth per sample (merged &amp; adapter/primer rimmed)&quot;)+
+  mytheme_2d +
+  theme(axis.text.x = element_text(hjust = 1, vjust=0.95,angle=40,size=13,face=&quot;bold&quot;, colour = &#39;black&#39;))</code></pre>
+<p><img src="figure/220805_effect_of_primer_trimming.Rmd/unnamed-chunk-2-3.png" width="1056" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># 2.2. merge + unmerged &amp; trimmed (after)
+df_phy_mut &lt;- psmelt(phy_mut)
+head(df_phy_mut)</code></pre>
+<pre><code>                                     OTU                     Sample Abundance
+1654302 c535dbd91471c043c7c3d60e49323151 SampleA77_unmerged_forward      7859
+163338  12fbdb6664af4736e9bc35e7c209071e SampleA77_unmerged_reverse      7376
+1840902 db270a26eb373bf4a3d6e81609e68639                  SampleA77      5707
+68415   07dde6ddb6f3a0429924950100b72b55 SampleA77_unmerged_reverse      5317
+389627  2d640c82d54754d8ed29641f0cf3172e SampleA77_unmerged_reverse      5053
+1178350 8c4f5d46f4443336ab46b41c3e73aef3 SampleA77_unmerged_forward      4963
+                          SampleID Sample_Well TubeNumber Sample_name
+1654302 SampleA77_unmerged_forward         G05  220630-39    Positive
+163338  SampleA77_unmerged_reverse         G05  220630-39    Positive
+1840902                  SampleA77         G05  220630-39    Positive
+68415   SampleA77_unmerged_reverse         G05  220630-39    Positive
+389627  SampleA77_unmerged_reverse         G05  220630-39    Positive
+1178350 SampleA77_unmerged_forward         G05  220630-39    Positive
+        ReplicateID      Read_type                  ReadID     Soil Time_point
+1654302    Positive Single_forward Positive_Single_forward Positive       None
+163338     Positive Single_reverse Positive_Single_reverse Positive       None
+1840902    Positive         Paired         Positive_Paired Positive       None
+68415      Positive Single_reverse Positive_Single_reverse Positive       None
+389627     Positive Single_reverse Positive_Single_reverse Positive       None
+1178350    Positive Single_forward Positive_Single_forward Positive       None
+        Titration_type Unit Replicate          Description PCR.pooling
+1654302           None    0         1 MSB-1001 no dilution           3
+163338            None    0         1 MSB-1001 no dilution           3
+1840902           None    0         1 MSB-1001 no dilution           3
+68415             None    0         1 MSB-1001 no dilution           3
+389627            None    0         1 MSB-1001 no dilution           3
+1178350           None    0         1 MSB-1001 no dilution           3
+              Rank1           Rank2         Rank3              Rank4
+1654302 d__Bacteria   p__Firmicutes c__Clostridia   o__Clostridiales
+163338  d__Bacteria   p__Firmicutes c__Clostridia   o__Clostridiales
+1840902 d__Bacteria p__Deinococcota c__Deinococci   o__Deinococcales
+68415   d__Bacteria   p__Firmicutes    c__Bacilli o__Lactobacillales
+389627  d__Bacteria   p__Firmicutes    c__Bacilli      o__Bacillales
+1178350 d__Bacteria   p__Firmicutes    c__Bacilli      o__Bacillales
+                      Rank5                          Rank6
+1654302   f__Clostridiaceae g__Clostridium_sensu_stricto_1
+163338    f__Clostridiaceae g__Clostridium_sensu_stricto_1
+1840902   f__Deinococcaceae                 g__Deinococcus
+68415   f__Lactobacillaceae               g__Lactobacillus
+389627       f__Bacillaceae                    g__Bacillus
+1178350      f__Bacillaceae                    g__Bacillus
+                             Rank7
+1654302                       &lt;NA&gt;
+163338                        &lt;NA&gt;
+1840902 s__Deinococcus_radiodurans
+68415                         &lt;NA&gt;
+389627                        &lt;NA&gt;
+1178350                       &lt;NA&gt;</code></pre>
+<pre class="r"><code># I&#39;ll divide the number by 2, if it is just forward or reverse reads
+df_phy_mut$Abundance &lt;- ifelse(grepl(&quot;forward|reverse&quot;,df_phy_mut$SampleID), df_phy_mut$Abundance / 2 ,df_phy_mut$Abundance)
+head(df_phy_mut)</code></pre>
+<pre><code>                                     OTU                     Sample Abundance
+1654302 c535dbd91471c043c7c3d60e49323151 SampleA77_unmerged_forward    3929.5
+163338  12fbdb6664af4736e9bc35e7c209071e SampleA77_unmerged_reverse    3688.0
+1840902 db270a26eb373bf4a3d6e81609e68639                  SampleA77    5707.0
+68415   07dde6ddb6f3a0429924950100b72b55 SampleA77_unmerged_reverse    2658.5
+389627  2d640c82d54754d8ed29641f0cf3172e SampleA77_unmerged_reverse    2526.5
+1178350 8c4f5d46f4443336ab46b41c3e73aef3 SampleA77_unmerged_forward    2481.5
+                          SampleID Sample_Well TubeNumber Sample_name
+1654302 SampleA77_unmerged_forward         G05  220630-39    Positive
+163338  SampleA77_unmerged_reverse         G05  220630-39    Positive
+1840902                  SampleA77         G05  220630-39    Positive
+68415   SampleA77_unmerged_reverse         G05  220630-39    Positive
+389627  SampleA77_unmerged_reverse         G05  220630-39    Positive
+1178350 SampleA77_unmerged_forward         G05  220630-39    Positive
+        ReplicateID      Read_type                  ReadID     Soil Time_point
+1654302    Positive Single_forward Positive_Single_forward Positive       None
+163338     Positive Single_reverse Positive_Single_reverse Positive       None
+1840902    Positive         Paired         Positive_Paired Positive       None
+68415      Positive Single_reverse Positive_Single_reverse Positive       None
+389627     Positive Single_reverse Positive_Single_reverse Positive       None
+1178350    Positive Single_forward Positive_Single_forward Positive       None
+        Titration_type Unit Replicate          Description PCR.pooling
+1654302           None    0         1 MSB-1001 no dilution           3
+163338            None    0         1 MSB-1001 no dilution           3
+1840902           None    0         1 MSB-1001 no dilution           3
+68415             None    0         1 MSB-1001 no dilution           3
+389627            None    0         1 MSB-1001 no dilution           3
+1178350           None    0         1 MSB-1001 no dilution           3
+              Rank1           Rank2         Rank3              Rank4
+1654302 d__Bacteria   p__Firmicutes c__Clostridia   o__Clostridiales
+163338  d__Bacteria   p__Firmicutes c__Clostridia   o__Clostridiales
+1840902 d__Bacteria p__Deinococcota c__Deinococci   o__Deinococcales
+68415   d__Bacteria   p__Firmicutes    c__Bacilli o__Lactobacillales
+389627  d__Bacteria   p__Firmicutes    c__Bacilli      o__Bacillales
+1178350 d__Bacteria   p__Firmicutes    c__Bacilli      o__Bacillales
+                      Rank5                          Rank6
+1654302   f__Clostridiaceae g__Clostridium_sensu_stricto_1
+163338    f__Clostridiaceae g__Clostridium_sensu_stricto_1
+1840902   f__Deinococcaceae                 g__Deinococcus
+68415   f__Lactobacillaceae               g__Lactobacillus
+389627       f__Bacillaceae                    g__Bacillus
+1178350      f__Bacillaceae                    g__Bacillus
+                             Rank7
+1654302                       &lt;NA&gt;
+163338                        &lt;NA&gt;
+1840902 s__Deinococcus_radiodurans
+68415                         &lt;NA&gt;
+389627                        &lt;NA&gt;
+1178350                       &lt;NA&gt;</code></pre>
+<pre class="r"><code>df_phy_abun_mut &lt;- df_phy_mut %&gt;% group_by(ReplicateID, Sample_name, Replicate) %&gt;% summarise(Total=sum(Abundance))
+
+# plot usable reads
+df_phy_abun_mut</code></pre>
+<pre><code># A tibble: 39 x 4
+# Groups:   ReplicateID, Sample_name [39]
+   ReplicateID               Sample_name            Replicate  Total
+   &lt;chr&gt;                     &lt;fct&gt;                      &lt;int&gt;  &lt;dbl&gt;
+ 1 Barneveld2_T0_R1          Barneveld2_T0                  1 35636 
+ 2 Barneveld2_T0_R2          Barneveld2_T0                  2 40049 
+ 3 Barneveld2_T0_R3          Barneveld2_T0                  3 48878.
+ 4 Barneveld2_T9_H0_CHL_R1   Barneveld2_T9_H0_CHL           1 46253 
+ 5 Barneveld2_T9_H0_CHL_R2   Barneveld2_T9_H0_CHL           2 43848.
+ 6 Barneveld2_T9_H0_CHL_R3   Barneveld2_T9_H0_CHL           3 29902.
+ 7 Barneveld2_T9_H0_R1       Barneveld2_T9_H0               1 53156 
+ 8 Barneveld2_T9_H0_R2       Barneveld2_T9_H0               2 40542.
+ 9 Barneveld2_T9_H0_R3       Barneveld2_T9_H0               3 36966.
+10 Barneveld2_T9_OH10_CHL_R1 Barneveld2_T9_OH10_CHL         1 41713 
+# ... with 29 more rows</code></pre>
+<pre class="r"><code>df_phy_abun_mut$Replicate &lt;- factor(df_phy_abun_mut$Replicate)
+
+ggplot(df_phy_abun_mut, aes(x=Sample_name, y=Total, fill=Replicate)) +  ## I put fill=value which was wrong
+  geom_bar(stat=&quot;identity&quot;, position = &quot;dodge&quot;) +
+  # scale_fill_brewer(palette=&#39;Set2&#39;) +
+  xlab(&quot;Sample&quot;) +
+  ylab(&quot;Number of sequence reads \n&quot;) +
+  ggtitle(&quot;Sequence Depth per sample (merged + unmerged &amp; adapter/primer rimmed)&quot;)+
+  mytheme_2d +
+  theme(axis.text.x = element_text(hjust = 1, vjust=0.95,angle=40,size=13,face=&quot;bold&quot;, colour = &#39;black&#39;))</code></pre>
+<p><img src="figure/220805_effect_of_primer_trimming.Rmd/unnamed-chunk-2-4.png" width="1056" style="display: block; margin: auto;" /></p>
+</div>
+<div id="now-lets-compare-sequence-length-distribution-abundance"
+class="section level2">
+<h2>Now let’s compare sequence length distribution &amp; abundance</h2>
+<pre class="r"><code>## Import the sequence length tsv
+tsv_notrim &lt;- read_tsv(&quot;data/220726_Miseq_micro_v2/asv_length_pear_merged_no_trim.tsv&quot;,
+    col_names = F) %&gt;%
+    rename(ASV = X1, Length = X2)
+tsv_trimmed &lt;- read_tsv(&quot;data/220726_Miseq_micro_v2/asv_length_primer_trimmed.tsv&quot;,
+    col_names = F) %&gt;%
+    rename(ASV = X1, Length = X2)
+tsv_mergetrimmed &lt;- read_tsv(&quot;data/220726_Miseq_micro_v2/asv_length_merged_primer_trimmed.tsv&quot;,
+    col_names = F) %&gt;%
+    rename(ASV = X1, Length = X2)
+tsv_mut &lt;- read_tsv(&quot;data/220726_Miseq_micro_v2/asv_length_merged_unmerged_primer_trimmed.tsv&quot;,
+    col_names = F) %&gt;%
+    rename(ASV = X1, Length = X2)
+
+## merge with otu (asv) file 1. before:
+## no trim
+df_notrim &lt;- df_phy_notrim %&gt;%
+    select(OTU, Sample, Abundance, Replicate) %&gt;%
+    group_by(OTU) %&gt;%
+    summarise(Frequency = sum(Abundance)) %&gt;%
+    rename(ASV = OTU) %&gt;%
+    left_join(tsv_notrim, by = c(ASV = &quot;ASV&quot;)) %&gt;%
+    ungroup()
+df_notrim_len &lt;- df_notrim %&gt;%
+    group_by(Length) %&gt;%
+    summarize(Length_frequency = sum(Frequency)) %&gt;%
+    ungroup()
+
+df_notrim_len %&lt;&gt;%
+    mutate(Ranges = cut(Length, seq(0, 500,
+        20))) %&gt;%
+    group_by(Ranges) %&gt;%
+    summarize(sums = sum(Length_frequency))
+
+ggplot(df_notrim_len, aes(x = Ranges, y = sums)) +
+    geom_bar(stat = &quot;identity&quot;, fill = &quot;darkgreen&quot;,
+        alpha = 0.5) + xlab(&quot;\n Asv sequence length&quot;) +
+    ylab(&quot;Total read count (all samples combined) \n&quot;) +
+    ggtitle(&quot;Read length distribution (Before adapter &amp; primer trimmed)&quot;) +
+    mytheme_2d</code></pre>
+<p><img src="figure/220805_effect_of_primer_trimming.Rmd/unnamed-chunk-3-1.png" width="1056" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># 2. after: trimmed
+df_trimmed &lt;- df_phy_trimmed %&gt;%
+    select(OTU, Sample, Abundance, Replicate) %&gt;%
+    group_by(OTU) %&gt;%
+    summarise(Frequency = sum(Abundance)) %&gt;%
+    rename(ASV = OTU) %&gt;%
+    left_join(tsv_trimmed, by = c(ASV = &quot;ASV&quot;)) %&gt;%
+    ungroup()
+df_trimmed_len &lt;- df_trimmed %&gt;%
+    group_by(Length) %&gt;%
+    summarize(Length_frequency = sum(Frequency)) %&gt;%
+    ungroup()
+
+df_trimmed_len %&lt;&gt;%
+    mutate(Ranges = cut(Length, seq(0, 500,
+        20))) %&gt;%
+    group_by(Ranges) %&gt;%
+    summarize(sums = sum(Length_frequency))
+
+ggplot(df_trimmed_len, aes(x = Ranges, y = sums)) +
+    geom_bar(stat = &quot;identity&quot;, fill = &quot;purple&quot;,
+        alpha = 0.5) + xlab(&quot;\n Asv sequence length&quot;) +
+    ylab(&quot;Total read count (all samples combined) \n&quot;) +
+    ggtitle(&quot;Read length distribution (After adapter &amp; primer trimmed)&quot;) +
+    mytheme_2d</code></pre>
+<p><img src="figure/220805_effect_of_primer_trimming.Rmd/unnamed-chunk-3-2.png" width="1056" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># 2.1. after: merge &amp; trimmed
+df_mergetrimmed &lt;- df_phy_mergetrimmed %&gt;%
+    select(OTU, Sample, Abundance, Replicate) %&gt;%
+    group_by(OTU) %&gt;%
+    summarise(Frequency = sum(Abundance)) %&gt;%
+    rename(ASV = OTU) %&gt;%
+    left_join(tsv_mergetrimmed, by = c(ASV = &quot;ASV&quot;)) %&gt;%
+    ungroup()
+df_mergetrimmed_len &lt;- df_mergetrimmed %&gt;%
+    group_by(Length) %&gt;%
+    summarize(Length_frequency = sum(Frequency)) %&gt;%
+    ungroup()
+
+df_mergetrimmed_len %&lt;&gt;%
+    mutate(Ranges = cut(Length, seq(0, 500,
+        20))) %&gt;%
+    group_by(Ranges) %&gt;%
+    summarize(sums = sum(Length_frequency))
+
+ggplot(df_mergetrimmed_len, aes(x = Ranges,
+    y = sums)) + geom_bar(stat = &quot;identity&quot;,
+    fill = &quot;red&quot;, alpha = 0.5) + xlab(&quot;\n Asv sequence length&quot;) +
+    ylab(&quot;Total read count (all samples combined) \n&quot;) +
+    ggtitle(&quot;Read length distribution (After merged &amp; adapter/primer trimmed)&quot;) +
+    mytheme_2d</code></pre>
+<p><img src="figure/220805_effect_of_primer_trimming.Rmd/unnamed-chunk-3-3.png" width="1056" style="display: block; margin: auto;" /></p>
+<pre class="r"><code># 2.2. after: merge + unmerged &amp;
+# trimmed
+
+df_phy_mut &lt;- psmelt(phy_mut)
+head(df_phy_mut)</code></pre>
+<pre><code>                                     OTU                     Sample Abundance
+1654302 c535dbd91471c043c7c3d60e49323151 SampleA77_unmerged_forward      7859
+163338  12fbdb6664af4736e9bc35e7c209071e SampleA77_unmerged_reverse      7376
+1840902 db270a26eb373bf4a3d6e81609e68639                  SampleA77      5707
+68415   07dde6ddb6f3a0429924950100b72b55 SampleA77_unmerged_reverse      5317
+389627  2d640c82d54754d8ed29641f0cf3172e SampleA77_unmerged_reverse      5053
+1178350 8c4f5d46f4443336ab46b41c3e73aef3 SampleA77_unmerged_forward      4963
+                          SampleID Sample_Well TubeNumber Sample_name
+1654302 SampleA77_unmerged_forward         G05  220630-39    Positive
+163338  SampleA77_unmerged_reverse         G05  220630-39    Positive
+1840902                  SampleA77         G05  220630-39    Positive
+68415   SampleA77_unmerged_reverse         G05  220630-39    Positive
+389627  SampleA77_unmerged_reverse         G05  220630-39    Positive
+1178350 SampleA77_unmerged_forward         G05  220630-39    Positive
+        ReplicateID      Read_type                  ReadID     Soil Time_point
+1654302    Positive Single_forward Positive_Single_forward Positive       None
+163338     Positive Single_reverse Positive_Single_reverse Positive       None
+1840902    Positive         Paired         Positive_Paired Positive       None
+68415      Positive Single_reverse Positive_Single_reverse Positive       None
+389627     Positive Single_reverse Positive_Single_reverse Positive       None
+1178350    Positive Single_forward Positive_Single_forward Positive       None
+        Titration_type Unit Replicate          Description PCR.pooling
+1654302           None    0         1 MSB-1001 no dilution           3
+163338            None    0         1 MSB-1001 no dilution           3
+1840902           None    0         1 MSB-1001 no dilution           3
+68415             None    0         1 MSB-1001 no dilution           3
+389627            None    0         1 MSB-1001 no dilution           3
+1178350           None    0         1 MSB-1001 no dilution           3
+              Rank1           Rank2         Rank3              Rank4
+1654302 d__Bacteria   p__Firmicutes c__Clostridia   o__Clostridiales
+163338  d__Bacteria   p__Firmicutes c__Clostridia   o__Clostridiales
+1840902 d__Bacteria p__Deinococcota c__Deinococci   o__Deinococcales
+68415   d__Bacteria   p__Firmicutes    c__Bacilli o__Lactobacillales
+389627  d__Bacteria   p__Firmicutes    c__Bacilli      o__Bacillales
+1178350 d__Bacteria   p__Firmicutes    c__Bacilli      o__Bacillales
+                      Rank5                          Rank6
+1654302   f__Clostridiaceae g__Clostridium_sensu_stricto_1
+163338    f__Clostridiaceae g__Clostridium_sensu_stricto_1
+1840902   f__Deinococcaceae                 g__Deinococcus
+68415   f__Lactobacillaceae               g__Lactobacillus
+389627       f__Bacillaceae                    g__Bacillus
+1178350      f__Bacillaceae                    g__Bacillus
+                             Rank7
+1654302                       &lt;NA&gt;
+163338                        &lt;NA&gt;
+1840902 s__Deinococcus_radiodurans
+68415                         &lt;NA&gt;
+389627                        &lt;NA&gt;
+1178350                       &lt;NA&gt;</code></pre>
+<pre class="r"><code># I&#39;ll divide the number by 2, if it is
+# just forward or reverse reads
+df_mut &lt;- df_phy_mut %&gt;%
+    select(OTU, Sample, Abundance, Replicate) %&gt;%
+    group_by(OTU) %&gt;%
+    summarise(Frequency = sum(Abundance)) %&gt;%
+    rename(ASV = OTU) %&gt;%
+    left_join(tsv_mut, by = c(ASV = &quot;ASV&quot;)) %&gt;%
+    ungroup()
+df_mut_len &lt;- df_mut %&gt;%
+    group_by(Length) %&gt;%
+    summarize(Length_frequency = sum(Frequency)) %&gt;%
+    ungroup()
+
+df_mut_len %&lt;&gt;%
+    mutate(Ranges = cut(Length, seq(0, 500,
+        20))) %&gt;%
+    group_by(Ranges) %&gt;%
+    summarize(sums = sum(Length_frequency))
+
+ggplot(df_mut_len, aes(x = Ranges, y = sums)) +
+    geom_bar(stat = &quot;identity&quot;, fill = &quot;orange&quot;,
+        alpha = 0.5) + xlab(&quot;\n Asv sequence length&quot;) +
+    ylab(&quot;Total read count (all samples combined) \n&quot;) +
+    ggtitle(&quot;Read length distribution (After merged + unmerged &amp; adapter/primer trimmed)&quot;) +
+    mytheme_2d</code></pre>
+<p><img src="figure/220805_effect_of_primer_trimming.Rmd/unnamed-chunk-3-4.png" width="1056" style="display: block; margin: auto;" /></p>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span>
+Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.0.3 (2020-10-10)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows 10 x64 (build 22000)
+
+Matrix products: default
+
+locale:
+[1] LC_COLLATE=English_United States.1252 
+[2] LC_CTYPE=English_United States.1252   
+[3] LC_MONETARY=English_United States.1252
+[4] LC_NUMERIC=C                          
+[5] LC_TIME=English_United States.1252    
+
+attached base packages:
+[1] parallel  grid      stats     graphics  grDevices utils     datasets 
+[8] methods   base     
+
+other attached packages:
+ [1] metagenomeSeq_1.32.0 glmnet_4.1-4         Matrix_1.2-18       
+ [4] limma_3.46.0         Biobase_2.50.0       BiocGenerics_0.36.1 
+ [7] BiocManager_1.30.18  agricolae_1.3-5      gridExtra_2.3       
+[10] scales_1.2.0         ggpubr_0.4.0         ggrepel_0.9.1       
+[13] ape_5.5              openxlsx_4.2.3       devtools_2.4.0      
+[16] usethis_2.0.1        gtools_3.8.2         reshape2_1.4.4      
+[19] readxl_1.3.1         magrittr_2.0.1       forcats_0.5.1       
+[22] stringr_1.4.0        purrr_0.3.4          readr_1.4.0         
+[25] tidyr_1.1.3          tibble_3.0.4         tidyverse_1.3.1     
+[28] vegan_2.5-7          lattice_0.20-41      permute_0.9-5       
+[31] RColorBrewer_1.1-2   ggplot2_3.3.5        dplyr_1.0.5         
+[34] phyloseq_1.34.0      knitr_1.37           workflowr_1.6.2     
+
+loaded via a namespace (and not attached):
+  [1] backports_1.2.1    plyr_1.8.6         igraph_1.2.6      
+  [4] splines_4.0.3      AlgDesign_1.2.0    digest_0.6.27     
+  [7] foreach_1.5.2      htmltools_0.5.1.1  fansi_0.4.2       
+ [10] memoise_2.0.1      cluster_2.1.0      remotes_2.4.2     
+ [13] Biostrings_2.58.0  modelr_0.1.8       matrixStats_0.60.0
+ [16] prettyunits_1.1.1  colorspace_2.0-0   rvest_1.0.2       
+ [19] haven_2.4.1        xfun_0.29          callr_3.7.0       
+ [22] crayon_1.5.1       jsonlite_1.7.2     survival_3.2-7    
+ [25] iterators_1.0.14   glue_1.6.2         gtable_0.3.0      
+ [28] zlibbioc_1.36.0    XVector_0.30.0     questionr_0.7.7   
+ [31] car_3.0-11         pkgbuild_1.3.1     Rhdf5lib_1.12.1   
+ [34] shape_1.4.6        abind_1.4-5        DBI_1.1.1         
+ [37] rstatix_0.7.0      miniUI_0.1.1.1     Rcpp_1.0.8.3      
+ [40] xtable_1.8-4       foreign_0.8-80     stats4_4.0.3      
+ [43] httr_1.4.2         gplots_3.1.3       ellipsis_0.3.2    
+ [46] farver_2.1.0       pkgconfig_2.0.3    sass_0.4.1        
+ [49] dbplyr_2.1.1       locfit_1.5-9.4     utf8_1.1.4        
+ [52] labeling_0.4.2     tidyselect_1.1.2   rlang_1.0.2       
+ [55] later_1.2.0        munsell_0.5.0      cellranger_1.1.0  
+ [58] tools_4.0.3        cachem_1.0.4       cli_3.2.0         
+ [61] generics_0.1.0     ade4_1.7-17        broom_0.7.9       
+ [64] evaluate_0.15      biomformat_1.18.0  fastmap_1.1.0     
+ [67] yaml_2.2.1         processx_3.5.1     fs_1.5.0          
+ [70] zip_2.1.1          caTools_1.18.2     nlme_3.1-149      
+ [73] mime_0.11          whisker_0.4        formatR_1.12      
+ [76] xml2_1.3.2         compiler_4.0.3     rstudioapi_0.13   
+ [79] curl_4.3.2         testthat_3.0.2     ggsignif_0.6.3    
+ [82] reprex_2.0.1       klaR_0.6-15        bslib_0.2.5.1     
+ [85] stringi_1.5.3      highr_0.9          ps_1.6.0          
+ [88] desc_1.4.1         multtest_2.46.0    vctrs_0.3.8       
+ [91] pillar_1.6.0       lifecycle_1.0.1    rhdf5filters_1.2.1
+ [94] combinat_0.0-8     jquerylib_0.1.4    bitops_1.0-7      
+ [97] data.table_1.14.0  httpuv_1.6.0       R6_2.5.1          
+[100] promises_1.2.0.1   KernSmooth_2.23-17 rio_0.5.29        
+[103] IRanges_2.24.1     sessioninfo_1.2.2  codetools_0.2-16  
+[106] MASS_7.3-53        assertthat_0.2.1   pkgload_1.2.1     
+[109] Wrench_1.8.0       rhdf5_2.34.0       rprojroot_2.0.3   
+[112] withr_2.5.0        S4Vectors_0.28.1   mgcv_1.8-33       
+[115] hms_1.1.1          labelled_2.8.0     rmarkdown_2.14    
+[118] carData_3.0-5      git2r_0.28.0       shiny_1.6.0       
+[121] lubridate_1.7.10  </code></pre>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+http://docs.mathjax.org/en/latest/configuration.html.  This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open');
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // temporarily add toc-ignore selector to headers for the consistency with Pandoc
+    $('.unlisted.unnumbered').addClass('toc-ignore')
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
