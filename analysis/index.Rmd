@@ -14,5 +14,5 @@ Miseq analysis hub for amplicon sequencing
 * [220805_effect_of_primer_trimming](220805_effect_of_primer_trimming.html)
 * [220807_Soil_pH_examine_new_pipeline](220807_Soil_pH_examine_new_pipeline.html)
 * [220808_Soil_pH_examine_plus_unmerged](220808_Soil_pH_examine_plus_unmerged.html)
-
+* [221002_Soil_pH_spike_in_plus_unmerged](221002_Soil_pH_spike_in_plus_unmerged.html)
 
