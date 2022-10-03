@@ -379,6 +379,62 @@ ggplot(df_phy_abun_sampleID, aes(x=ReplicateID, y=Total, fill = Read_type)) +  #
 
 ```
 
+## Are there Ecoli?
+```{r}
+df_find_ecoli <- tax_table(phy)
+class(df_find_ecoli)
+df_find_ecoli <- as.data.frame(as.matrix(df_find_ecoli))
+
+
+df_find_ecoli %>% filter(Genus == "g__Escherichia") # none
+df_find_ecoli %>% filter(Family == "f__Enterobacteriaceae") # we have some!!
+
+# In which sample?
+colnames(df_phy)
+df_phy %>% filter(Family == "f__Enterobacteriaceae", Abundance > 0)
+
+# It was in positive, but removed eventually due to reads in negative samples.
+
+# TM425 DFI strain  - it works!!
+df_find_ecoli %>% filter(Genus == "g__Parabacteroides")
+df_find_ecoli %>% filter(Family == "f__Tannerellaceae")
+df_phy %>% filter(Genus == "g__Parabacteroides", Abundance > 0)
+df_phy %>% filter(Family == "f__Tannerellaceae", Abundance > 0)
+
+# TM84 - only in positive
+df_find_ecoli %>% filter(Genus == "g__Bifidobacterium")
+df_find_ecoli %>% filter(Family == "f__Bifidobacteriaceae")
+df_phy %>% filter(Genus == "g__Bifidobacterium", Abundance > 0)
+df_phy %>% filter(Family == "f__Bifidobacteriaceae", Abundance > 0)
+
+# TM396 - nope
+df_find_ecoli %>% filter(Genus == "g__Lachnoclostridium")
+df_find_ecoli %>% filter(Family == "f__Lachnospiraceae")
+df_phy %>% filter(Genus == "g__Lachnoclostridium", Abundance > 0)
+df_phy %>% filter(Family == "f__Lachnospiraceae", Abundance > 0)
+
+# TM1 - 1 sample
+# Selenomonadaceae
+# Megamonas
+df_find_ecoli %>% filter(Genus == "g__Megamonas")
+df_find_ecoli %>% filter(Family == "f__Selenomonadaceae")
+df_phy %>% filter(Genus == "g__Megamonas", Abundance > 0)
+df_phy %>% filter(Family == "f__Selenomonadaceae", Abundance > 0)
+
+# TM473 - in a few samples
+# Mediterraneibacter
+# Ruminococcus
+df_find_ecoli %>% filter(Genus == "g__Ruminococcus")
+df_find_ecoli %>% filter(Family == "f__Mediterraneibacter")
+df_phy %>% filter(Genus == "g__Ruminococcus", Abundance > 0)
+df_phy %>% filter(Family == "f__Mediterraneibacter", Abundance > 0)
+
+
+
+```
+
+
+
 ## filter negatives
 
 ```{r}
@@ -1680,7 +1736,7 @@ plot_rank_abundance <- function(mlt_rank_rel, Sample_name_i){
   # print("we are good")
   
   ggplot(df_mlt_plot, aes(x=Rank, y=Rel_abundance)) +
-    geom_point(aes(col=Replicate)) +
+    geom_point(aes(col=Replicate), size =0.7) +
     geom_line(aes(col=Replicate)) +
     ggtitle(paste0(Sample_name_i)) +
     ylab("Relative abundance") +
@@ -1700,7 +1756,632 @@ library(gridExtra)
 grid.arrange(grobs = l_plot2, ncol = 5)
 
 
+# subset of that
+l_sample_names2 <- c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL", "Barneveld2_T9_OH10", "Barneveld2_T9_OH10_CHL", "LaBaghWoods1_T0", "LaBaghWoods1_T9_H0", "LaBaghWoods1_T9_H0_CHL", "LaBaghWoods1_T9_OH8", "LaBaghWoods1_T9_OH8_CHL")
+
+l_plot22 <- list()
+for (i in 1:length(l_sample_names2)) {
+  print(i)
+  # print(l_sample_names[i])
+  l_plot22[[i]] <- plot_rank_abundance(mlt_rank_rel, l_sample_names2[i])
+}
+
+library(gridExtra)
+grid.arrange(grobs = l_plot22, ncol = 4)
+
 ```
+
+## Log transformation
+
+```{r}
+
+## 
+log10(10)
+log2(2)
+mlt_rank_rel$Log10_rel_abundance <- log10(mlt_rank_rel$Rel_abundance)
+mlt_rank_rel$Log_rel_abundance <- log(mlt_rank_rel$Rel_abundance)
+mlt_rank_rel$Log2_rel_abundance <- log2(mlt_rank_rel$Rel_abundance)
+
+plot_rank_abundance_log10 <- function(mlt_rank_rel, Sample_name_i){
+  mlt_rank_rel_B2_T0 <- mlt_rank_rel %>% filter(Sample_name == Sample_name_i)
+  
+  mlt_rank_rel_B2_T0$Replicate <- factor(mlt_rank_rel_B2_T0$Replicate)
+  
+  mlt_rank_rel_B2_T0_noNA <- na.omit(mlt_rank_rel_B2_T0)
+  df_mlt_plot <- mlt_rank_rel_B2_T0_noNA %>% select(Sample_name, Replicate, Rank, Log10_rel_abundance) %>% ungroup()
+  colnames(df_mlt_plot)
+  class(df_mlt_plot)
+  # print("we are good")
+  
+  ggplot(df_mlt_plot, aes(x=Rank, y=Log10_rel_abundance)) +
+    geom_point(aes(col=Replicate), size =0.7) +
+    geom_line(aes(col=Replicate)) +
+    ggtitle(paste0(Sample_name_i)) +
+    ylab("Log10(relative abundance)") +
+    xlab("Rank") +
+    mytheme_2d
+}
+
+plot_rank_abundance_log2 <- function(mlt_rank_rel, Sample_name_i){
+  mlt_rank_rel_B2_T0 <- mlt_rank_rel %>% filter(Sample_name == Sample_name_i)
+  
+  mlt_rank_rel_B2_T0$Replicate <- factor(mlt_rank_rel_B2_T0$Replicate)
+  
+  mlt_rank_rel_B2_T0_noNA <- na.omit(mlt_rank_rel_B2_T0)
+  df_mlt_plot <- mlt_rank_rel_B2_T0_noNA %>% select(Sample_name, Replicate, Rank, Log2_rel_abundance) %>% ungroup()
+  colnames(df_mlt_plot)
+  class(df_mlt_plot)
+  # print("we are good")
+  
+  ggplot(df_mlt_plot, aes(x=Rank, y=Log2_rel_abundance)) +
+    geom_point(aes(col=Replicate), size =0.7) +
+    geom_line(aes(col=Replicate)) +
+    ggtitle(paste0(Sample_name_i)) +
+    ylab("Log2(relative abundance)") +
+    xlab("Rank") +
+    mytheme_2d
+}
+
+plot_rank_abundance_log <- function(mlt_rank_rel, Sample_name_i){
+  mlt_rank_rel_B2_T0 <- mlt_rank_rel %>% filter(Sample_name == Sample_name_i)
+  
+  mlt_rank_rel_B2_T0$Replicate <- factor(mlt_rank_rel_B2_T0$Replicate)
+  
+  mlt_rank_rel_B2_T0_noNA <- na.omit(mlt_rank_rel_B2_T0)
+  df_mlt_plot <- mlt_rank_rel_B2_T0_noNA %>% select(Sample_name, Replicate, Rank, Log_rel_abundance) %>% ungroup()
+  colnames(df_mlt_plot)
+  class(df_mlt_plot)
+  # print("we are good")
+  
+  ggplot(df_mlt_plot, aes(x=Rank, y=Log_rel_abundance)) +
+    geom_point(aes(col=Replicate), size =0.7) +
+    geom_line(aes(col=Replicate)) +
+    ggtitle(paste0(Sample_name_i)) +
+    ylab("Log(relative abundance)") +
+    xlab("Rank") +
+    mytheme_2d
+}
+
+plot_rank_abundance_log10(mlt_rank_rel, "Barneveld2_T0")
+plot_rank_abundance_log2(mlt_rank_rel, "Barneveld2_T0")
+plot_rank_abundance_log(mlt_rank_rel, "Barneveld2_T0")
+
+
+# Let's roll with natural log
+l_plot_log <- list()
+for (i in 1:length(l_sample_names2)) {
+  print(i)
+  # print(l_sample_names[i])
+  l_plot_log[[i]] <- plot_rank_abundance_log(mlt_rank_rel, l_sample_names2[i])
+}
+
+library(gridExtra)
+grid.arrange(grobs = l_plot_log, ncol = 4)
+
+
+```
+
+## Use relative abundance values per replicate (8/9/22)
+
+```{r}
+plot_RA_change <- function(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"),
+                             Title = "Barneveld2_pH5.73 No pH perturbation"){
+  df_B_H0 <- mlt_rank_rel %>% filter(Sample_name %in% vec_Sample_name) 
+  dim(df_B_H0)
+  head(df_B_H0)
+  colnames(df_B_H0)
+  
+  ## get the log_RA abundance aligned to Barneveld2_T0
+  vec_family_B_H0 <- df_B_H0 %>% filter(Time_point == "T0", Replicate == 1) %>% arrange(desc(Rel_abundance)) %>% select(Family)
+  dim(vec_family_B_H0)
+  head(vec_family_B_H0)
+  vec_family_B_H0 <- vec_family_B_H0[,1]
+  df_B_H0$Family <- factor(df_B_H0$Family, levels = vec_family_B_H0)
+  df_B_H0$Replicate <- factor(df_B_H0$Replicate)　　　
+  
+  ggplot(df_B_H0, aes(x = Family, y = Rel_abundance)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=Sample_name, shape=Replicate), alpha =1) +
+    ggtitle(paste0(Title)) +
+    scale_color_manual(values = c("black","blue","red")) +
+    ylab("Relative abundance") +
+    xlab("Family ID") +
+    mytheme_2d +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+}
+
+(p_RA1 <- plot_RA_change(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"),
+                 Title = "Barneveld2(pH5.73): No pH perturbation"))
+
+(p_RA2 <- plot_RA_change(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_OH10", "Barneveld2_T9_OH10_CHL"),
+                 Title = "Barneveld2(pH5.73): Basic pH perturbation to pH 8.5"))
+
+(p_RA3 <- plot_RA_change(mlt_rank_rel, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_H0", "LaBaghWoods1_T9_H0_CHL"),
+                 Title = "LaBaghWoods1(pH6.66): No pH perturbation"))
+
+(p_RA4 <- plot_RA_change(mlt_rank_rel, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_OH8", "LaBaghWoods1_T9_OH8_CHL"),
+                 Title = "LaBaghWoods1(pH6.66): Basic pH perturbation to pH 9.1"))
+
+l_plot_RA <- list()
+l_plot_RA[[1]] <- p_RA1; l_plot_RA[[2]] <- p_RA2; l_plot_RA[[3]] <- p_RA3; l_plot_RA[[4]] <- p_RA4
+grid.arrange(grobs = l_plot_RA, ncol = 2)
+
+
+
+```
+
+## Plot by sample to see if relative abundance of each replicates agree (8/15/22)
+```{r}
+plot_RA_change_compare_replicates <- function(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T0")){
+  df_B_H0 <- mlt_rank_rel %>% filter(Sample_name %in% vec_Sample_name) 
+  dim(df_B_H0)
+  head(df_B_H0)
+  colnames(df_B_H0)
+  
+  ## get the log_RA abundance aligned to Barneveld2_T0
+  vec_family_B_H0 <- df_B_H0 %>% filter(Replicate == 1) %>% arrange(desc(Rel_abundance)) %>% select(Family)
+  dim(vec_family_B_H0)
+  head(vec_family_B_H0)
+  vec_family_B_H0 <- vec_family_B_H0[,1]
+  df_B_H0$Family <- factor(df_B_H0$Family, levels = vec_family_B_H0)
+  df_B_H0$Replicate <- factor(df_B_H0$Replicate)　　　
+  
+  ggplot(df_B_H0, aes(x = Family, y = Rel_abundance, color= Replicate, group = Replicate)) +
+    geom_point() +
+    geom_line() +
+    # ggtitle(paste0(Title)) +
+    # scale_color_manual(values = c("black","blue","red")) +
+    ylab("Relative abundance") +
+    xlab("Family ID") +
+    mytheme_2d +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank()) +
+    facet_grid(. ~ Sample_name, switch="y") +
+    theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+    theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+}
+
+## one sample at a time
+plot_RA_change_compare_replicates(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T0"))
+plot_RA_change_compare_replicates(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T9_H0"))
+plot_RA_change_compare_replicates(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T9_H0_CHL"))
+
+plot_RA_change_compare_replicates(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T9_OH10"))
+plot_RA_change_compare_replicates(mlt_rank_rel, vec_Sample_name = c("Barneveld2_T9_OH10_CHL"))
+
+plot_RA_change_compare_replicates(mlt_rank_rel, vec_Sample_name = c("LaBaghWoods1_T0"))
+plot_RA_change_compare_replicates(mlt_rank_rel, vec_Sample_name = c("LaBaghWoods1_T9_H0"))
+plot_RA_change_compare_replicates(mlt_rank_rel, vec_Sample_name = c("LaBaghWoods1_T9_H0_CHL"))
+
+plot_RA_change_compare_replicates(mlt_rank_rel, vec_Sample_name = c("LaBaghWoods1_T9_OH8"))
+plot_RA_change_compare_replicates(mlt_rank_rel, vec_Sample_name = c("LaBaghWoods1_T9_OH8_CHL"))
+
+## plot log
+mlt_rank_rel_log <- mlt_rank_rel
+mlt_rank_rel_log$Log10_rel_abundance <- log10(mlt_rank_rel_log$Rel_abundance)
+mlt_rank_rel_log$Log_rel_abundance <- log(mlt_rank_rel_log$Rel_abundance)
+mlt_rank_rel_log$Log2_rel_abundance <- log2(mlt_rank_rel_log$Rel_abundance)
+
+plot_RA_change_compare_replicates_log <- function(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0")){
+  df_B_H0 <- mlt_rank_rel %>% filter(Sample_name %in% vec_Sample_name) 
+  dim(df_B_H0)
+  head(df_B_H0)
+  colnames(df_B_H0)
+  
+  ## get the log_RA abundance aligned to Barneveld2_T0
+  vec_family_B_H0 <- df_B_H0 %>% filter(Replicate == 1) %>% arrange(desc(Rel_abundance)) %>% select(Family)
+  dim(vec_family_B_H0)
+  head(vec_family_B_H0)
+  vec_family_B_H0 <- vec_family_B_H0[,1]
+  df_B_H0$Family <- factor(df_B_H0$Family, levels = vec_family_B_H0)
+  df_B_H0$Replicate <- factor(df_B_H0$Replicate)　　　
+  
+  ggplot(df_B_H0, aes(x = Family, y = Log_rel_abundance, color= Replicate, group = Replicate)) +
+    geom_point() +
+    geom_line() +
+    # ggtitle(paste0(Title)) +
+    # scale_color_manual(values = c("black","blue","red")) +
+    ylab("Log Relative abundance") +
+    xlab("Family ID") +
+    mytheme_2d +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank()) +
+    facet_grid(. ~ Sample_name, switch="y") +
+    theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+    theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+}
+
+## one sample at a time
+plot_RA_change_compare_replicates_log(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0"))
+plot_RA_change_compare_replicates_log(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T9_H0"))
+plot_RA_change_compare_replicates_log(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T9_H0_CHL"))
+
+plot_RA_change_compare_replicates_log(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T9_OH10"))
+plot_RA_change_compare_replicates_log(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T9_OH10_CHL"))
+
+plot_RA_change_compare_replicates_log(mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T0"))
+plot_RA_change_compare_replicates_log(mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T9_H0"))
+plot_RA_change_compare_replicates_log(mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T9_H0_CHL"))
+
+plot_RA_change_compare_replicates_log(mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T9_OH8"))
+plot_RA_change_compare_replicates_log(mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T9_OH8_CHL"))
+
+## plot all of them
+l_sample_names2
+l_plot_compare_log <- list()
+for (i in 1:length(l_sample_names2)){
+  print(i)
+  l_plot_compare_log[[i]] <- plot_RA_change_compare_replicates_log(mlt_rank_rel_log, vec_Sample_name = l_sample_names2[i])
+}
+grid.arrange(grobs = l_plot_compare_log, ncol = 4)
+
+
+```
+
+
+
+## log relative abundance
+```{r}
+mlt_rank_rel_log <- mlt_rank_rel
+mlt_rank_rel_log$Log10_rel_abundance <- log10(mlt_rank_rel_log$Rel_abundance)
+mlt_rank_rel_log$Log_rel_abundance <- log(mlt_rank_rel_log$Rel_abundance)
+mlt_rank_rel_log$Log2_rel_abundance <- log2(mlt_rank_rel_log$Rel_abundance)
+
+
+plot_log_RA_change <- function(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"),
+                             Title = "Barneveld2_pH5.73 No pH perturbation"){
+  df_B_H0 <- mlt_rank_rel_log %>% filter(Sample_name %in% vec_Sample_name) 
+  dim(df_B_H0)
+  head(df_B_H0)
+  colnames(df_B_H0)
+  
+  ## get the log_RA abundance aligned to Barneveld2_T0
+  vec_family_B_H0 <- df_B_H0 %>% filter(Time_point == "T0", Replicate == 1) %>% arrange(desc(Log_rel_abundance)) %>% select(Family)
+  dim(vec_family_B_H0)
+  head(vec_family_B_H0)
+  vec_family_B_H0 <- vec_family_B_H0[,1]
+  df_B_H0$Family <- factor(df_B_H0$Family, levels = vec_family_B_H0)
+  df_B_H0$Replicate <- factor(df_B_H0$Replicate)　　　
+  
+  ggplot(df_B_H0, aes(x = Family, y = Log_rel_abundance)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=Sample_name, shape=Replicate), alpha =1) +
+    ggtitle(paste0(Title)) +
+    scale_color_manual(values = c("black","blue","red")) +
+    ylab("Log (Relative abundance)") +
+    xlab("Family ID") +
+    mytheme_2d +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+}
+
+(p_lRA1 <- plot_log_RA_change(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"),
+                 Title = "Barneveld2(pH5.73): No pH perturbation"))
+
+(p_lRA2 <- plot_log_RA_change(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_OH10", "Barneveld2_T9_OH10_CHL"),
+                 Title = "Barneveld2(pH5.73): Basic pH perturbation to pH 8.5"))
+
+(p_lRA3 <- plot_log_RA_change(mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_H0", "LaBaghWoods1_T9_H0_CHL"),
+                 Title = "LaBaghWoods1(pH6.66): No pH perturbation"))
+
+(p_lRA4 <- plot_log_RA_change(mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_OH8", "LaBaghWoods1_T9_OH8_CHL"),
+                 Title = "LaBaghWoods1(pH6.66): Basic pH perturbation to pH 9.1"))
+
+l_plot_lRA <- list()
+l_plot_lRA[[1]] <- p_lRA1; l_plot_lRA[[2]] <- p_lRA2; l_plot_lRA[[3]] <- p_lRA3; l_plot_lRA[[4]] <- p_lRA4
+grid.arrange(grobs = l_plot_lRA, ncol = 2)
+
+
+
+```
+
+## Change x-axis into averaged rank order (8/15/22)
+
+```{r}
+plot_log_RA_change_x_averaged_order <- function(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"),
+                             Title = "Barneveld2_pH5.73 No pH perturbation"){
+  df_B_H0 <- mlt_rank_rel_log %>% filter(Sample_name %in% vec_Sample_name) 
+  dim(df_B_H0)
+  head(df_B_H0)
+  colnames(df_B_H0)
+  
+  ## get the log_RA abundance aligned to Barneveld2_T0
+  vec_family_B_H0 <- df_B_H0 %>% filter(Time_point == "T0") %>% group_by(Family) %>% summarize(Ave_rel_abundance = mean(Rel_abundance, na.rm=T)) %>% arrange(desc(Ave_rel_abundance)) %>% select(Family)
+  dim(vec_family_B_H0)
+  vec_family_B_H0 <- vec_family_B_H0$Family
+  df_B_H0$Family <- factor(df_B_H0$Family, levels = vec_family_B_H0)
+  df_B_H0$Replicate <- factor(df_B_H0$Replicate)　　　
+  
+  ggplot(df_B_H0, aes(x = Family, y = Log_rel_abundance)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=Sample_name, shape=Replicate), alpha =1) +
+    ggtitle(paste0(Title)) +
+    scale_color_manual(values = c("black","blue","red")) +
+    ylab("Log Relative abundance") +
+    xlab("Family ID (order by T0's averaged RA)") +
+    mytheme_2d +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+}
+
+(p_lRA_x_1 <- plot_log_RA_change_x_averaged_order(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"),
+                 Title = "Barneveld2(pH5.73): No pH perturbation"))
+
+(p_lRA_x_2 <- plot_log_RA_change_x_averaged_order(mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_OH10", "Barneveld2_T9_OH10_CHL"),
+                 Title = "Barneveld2(pH5.73): Basic pH perturbation to pH 8.5"))
+
+(p_lRA_x_3 <- plot_log_RA_change_x_averaged_order(mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_H0", "LaBaghWoods1_T9_H0_CHL"),
+                 Title = "LaBaghWoods1(pH6.66): No pH perturbation"))
+
+(p_lRA_x_4 <- plot_log_RA_change_x_averaged_order(mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_OH8", "LaBaghWoods1_T9_OH8_CHL"),
+                 Title = "LaBaghWoods1(pH6.66): Basic pH perturbation to pH 9.1"))
+
+l_plot_lRA_x <- list()
+l_plot_lRA_x[[1]] <- p_lRA_x_1; l_plot_lRA_x[[2]] <- p_lRA_x_2; l_plot_lRA_x[[3]] <- p_lRA_x_3; l_plot_lRA_x[[4]] <- p_lRA_x_4
+grid.arrange(grobs = l_plot_lRA_x, ncol = 2)
+
+
+
+```
+
+## Plot delta log relative abundance with the new averaged order (8/15/22)
+
+```{r}
+mlt_rank_rel_log %<>% filter(Sample_name != "Positive")
+colnames(mlt_rank_rel_log)
+head(mlt_rank_rel_log)
+dim(mlt_rank_rel_log) # 10980
+
+# mlt_rel_log[is.na(mlt_rel_log)]
+# df_na <- mlt_rel_log[rowSums(is.na(mlt_rel_log)) > 0,] 
+# df_na
+# mlt_rel_log <- na.omit(mlt_rel_log)
+# dim(mlt_rel_log) #3357
+
+# augment metadata
+df_rel_log <- mlt_rank_rel_log
+df_rel_log$CHL <- ifelse(grepl("CHL", df_rel_log$Sample_name), "CHL", "None")
+df_rel_log$Perturbation <- ifelse(grepl("H0", df_rel_log$Sample_name), "No_perturbation", "Basic_perturbation")
+df_rel_log$PMA <- ifelse(grepl("PMA", df_rel_log$Sample_name), "PMA", "None")
+
+plot_rel_abun_change_log_averaged_order <- function(df_rel_log, Soil_name = "Barneveld2"){
+  # subset sample and exclude PMA samples
+  df_subset_sample <- df_rel_log %>% filter(Soil == Soil_name, PMA == "None")
+  # df_subset_sample <- df_rel_log 
+  dim(df_subset_sample)
+  head(df_subset_sample)
+  colnames(df_subset_sample)
+  
+  ## get the rank abundance aligned to Barneveld2_T0
+  colnames(df_subset_sample)
+  df_subset_sample
+  # make new column to indicate CHL or None
+  
+  # T0, T9 split
+  df_subset_T0 <- df_subset_sample %>% filter(Time_point == "T0") 
+  dim(df_subset_T0)
+  df_subset_T9 <- df_subset_sample %>% filter(Time_point == "T9") %>% rename(Log_rel_abundance_T9 = Log_rel_abundance)
+  dim(df_subset_T9)
+  
+  df_subset_T0 %<>% select(Family, Log_rel_abundance) %>% unique() %>% rename(Log_rel_abundance_T0 = Log_rel_abundance)
+  # merge and compute percent change
+  df_subset_T9 %<>% left_join(df_subset_T0, by = c("Family" = "Family"))
+  df_delta_relabun <- df_subset_T9 %>% mutate(Delta_log_rel = (Log_rel_abundance_T9 - Log_rel_abundance_T0) )
+  # when increased, it's better (multiply by (-))
+  head(df_delta_relabun)
+  dim(df_delta_relabun) # 875
+  colnames(df_delta_relabun)
+  
+  # df_delta_relabun <- na.omit(df_delta_relabun)
+  dim(df_delta_relabun) # 798
+  
+  length(df_delta_relabun$Family %>% unique())
+  
+  vec_family <- df_subset_sample %>% filter(Time_point == "T0") %>% group_by(Family) %>% summarize(Ave_rel_abundance = mean(Rel_abundance, na.rm=T)) %>% arrange(desc(Ave_rel_abundance)) %>% select(Family)
+  
+  dim(vec_family)
+  head(vec_family)
+  vec_family <- vec_family$Family
+  
+  print(vec_family)
+  
+  df_delta_relabun$Family <- factor(df_delta_relabun$Family, levels = vec_family)
+  # df_subset_sample$Replicate <- factor(df_subset_sample$Replicate)　　　
+  colnames(df_delta_relabun)
+  
+  df_delta_relabun$CHL <- factor(df_delta_relabun$CHL, levels =c("None", "CHL"))
+  df_delta_relabun$Perturbation <- factor(df_delta_relabun$Perturbation, levels =c("No_perturbation", "Basic_perturbation"))
+  
+  ggplot(df_delta_relabun, aes(x = Family, y = Delta_log_rel)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=CHL, shape =Replicate), size=2, alpha = 0.6) +
+    # ggtitle(paste0(Title)) +
+    scale_y_continuous(breaks=seq(-7.5,7.5,1), limits = c(-7.5, 7.5))+
+    scale_color_manual(values = c("blue","red")) +
+    ylab("Delta Log (Relative abundance) (delta log RA = log RA(T9) - log RA(T0))") +
+    xlab("Family ID (starting from highest rank at T0)") +
+    mytheme_2d +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())+
+    facet_grid(Soil ~ Perturbation, switch="y") +
+    theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+    theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+}
+
+# check
+# df_major_change <- df_delta_relabun %>% filter(Perturbation == "Basic_perturbation") %>% filter(Delta_ave_rel >0.02 | Delta_ave_rel < -0.02)
+
+(p_logra1 <- plot_rel_abun_change_log_averaged_order(df_rel_log, Soil_name = "Barneveld2"))
+(p_logra2 <- plot_rel_abun_change_log_averaged_order(df_rel_log, Soil_name = "LaBaghWoods1"))
+
+figure <- grid.arrange(p_logra1 + rremove("xy.title"), p_logra2 + rremove("xy.title"), nrow = 2)
+
+annotate_figure(figure, 
+                left = text_grob("Delta Log (Relative abundance) (delta log RA = log RA(T9) - log RA(T0)) \n", color = "black", rot = 90, vjust = 1, size =15, face='bold'),
+                bottom = text_grob("Family ID (starting from highest rank at T0)\n", color = "black", size =15, face='bold')
+                )
+
+
+```
+
+## delta log relative abundance (order of replicate1) (8/9/22)
+
+```{r}
+
+mlt_rank_rel_log %<>% filter(Sample_name != "Positive")
+colnames(mlt_rank_rel_log)
+head(mlt_rank_rel_log)
+dim(mlt_rank_rel_log) # 10980
+
+# mlt_rel_log[is.na(mlt_rel_log)]
+# df_na <- mlt_rel_log[rowSums(is.na(mlt_rel_log)) > 0,] 
+# df_na
+# mlt_rel_log <- na.omit(mlt_rel_log)
+# dim(mlt_rel_log) #3357
+
+# augment metadata
+df_rel_log <- mlt_rank_rel_log
+df_rel_log$CHL <- ifelse(grepl("CHL", df_rel_log$Sample_name), "CHL", "None")
+df_rel_log$Perturbation <- ifelse(grepl("H0", df_rel_log$Sample_name), "No_perturbation", "Basic_perturbation")
+df_rel_log$PMA <- ifelse(grepl("PMA", df_rel_log$Sample_name), "PMA", "None")
+
+plot_rel_abun_change_log <- function(df_rel_log, Soil_name = "Barneveld2"){
+  # subset sample and exclude PMA samples
+  df_subset_sample <- df_rel_log %>% filter(Soil == Soil_name, PMA == "None")
+  # df_subset_sample <- df_rel_log 
+  dim(df_subset_sample)
+  head(df_subset_sample)
+  colnames(df_subset_sample)
+  
+  ## get the rank abundance aligned to Barneveld2_T0
+  colnames(df_subset_sample)
+  df_subset_sample
+  # make new column to indicate CHL or None
+  
+  # T0, T9 split
+  df_subset_T0 <- df_subset_sample %>% filter(Time_point == "T0") 
+  dim(df_subset_T0)
+  df_subset_T9 <- df_subset_sample %>% filter(Time_point == "T9") %>% rename(Log_rel_abundance_T9 = Log_rel_abundance)
+  dim(df_subset_T9)
+  
+  df_subset_T0 %<>% select(Family, Log_rel_abundance) %>% unique() %>% rename(Log_rel_abundance_T0 = Log_rel_abundance)
+  # merge and compute percent change
+  df_subset_T9 %<>% left_join(df_subset_T0, by = c("Family" = "Family"))
+  df_delta_relabun <- df_subset_T9 %>% mutate(Delta_log_rel = (Log_rel_abundance_T9 - Log_rel_abundance_T0) )
+  # when increased, it's better (multiply by (-))
+  head(df_delta_relabun)
+  dim(df_delta_relabun) # 875
+  colnames(df_delta_relabun)
+  
+  # df_delta_relabun <- na.omit(df_delta_relabun)
+  dim(df_delta_relabun) # 798
+  
+  length(df_delta_relabun$Family %>% unique())
+  
+  vec_family <- df_subset_sample %>% filter(Time_point == "T0", Replicate == 1) %>% arrange(desc(Log_rel_abundance)) %>% select(Family)
+  dim(vec_family)
+  head(vec_family)
+  vec_family <- vec_family$Family
+  df_delta_relabun$Family <- factor(df_delta_relabun$Family, levels = vec_family)
+  # df_subset_sample$Replicate <- factor(df_subset_sample$Replicate)　　　
+  colnames(df_delta_relabun)
+  
+  df_delta_relabun$CHL <- factor(df_delta_relabun$CHL, levels =c("None", "CHL"))
+  df_delta_relabun$Perturbation <- factor(df_delta_relabun$Perturbation, levels =c("No_perturbation", "Basic_perturbation"))
+  
+  ggplot(df_delta_relabun, aes(x = Family, y = Delta_log_rel)) +
+    # geom_line(aes(col=Sample)) +
+    geom_point(aes(col=CHL, shape =Replicate), size=2, alpha = 0.6) +
+    # ggtitle(paste0(Title)) +
+    scale_y_continuous(breaks=seq(-7.5,7.5,1), limits = c(-7.5, 7.5))+
+    scale_color_manual(values = c("blue","red")) +
+    ylab("Delta Log (Relative abundance) (delta log RA = log RA(T9) - log RA(T0))") +
+    xlab("Family ID (starting from highest rank at T0)") +
+    mytheme_2d +
+    theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())+
+    facet_grid(Soil ~ Perturbation, switch="y") +
+    theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+    theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+}
+
+# check
+# df_major_change <- df_delta_relabun %>% filter(Perturbation == "Basic_perturbation") %>% filter(Delta_ave_rel >0.02 | Delta_ave_rel < -0.02)
+
+(p_logra1 <- plot_rel_abun_change_log(df_rel_log, Soil_name = "Barneveld2"))
+(p_logra2 <- plot_rel_abun_change_log(df_rel_log, Soil_name = "LaBaghWoods1"))
+
+figure <- grid.arrange(p_logra1 + rremove("xy.title"), p_logra2 + rremove("xy.title"), nrow = 2)
+
+annotate_figure(figure, 
+                left = text_grob("Delta Log (Relative abundance) (delta log RA = log RA(T9) - log RA(T0)) \n", color = "black", rot = 90, vjust = 1, size =15, face='bold'),
+                bottom = text_grob("Family ID (starting from highest rank at T0)\n", color = "black", size =15, face='bold')
+                )
+
+
+## What are they?
+## who are they?
+
+generate_df_rel_abun_change_log <- function(df_rel_log){
+   # subset sample and exclude PMA samples
+  df_subset_sample <- df_rel_log %>% filter(PMA == "None")
+  # df_subset_sample <- df_rel_log 
+  dim(df_subset_sample)
+  head(df_subset_sample)
+  colnames(df_subset_sample)
+  
+  ## get the rank abundance aligned to Barneveld2_T0
+  colnames(df_subset_sample)
+  df_subset_sample
+  # make new column to indicate CHL or None
+  
+  # T0, T9 split
+  df_subset_T0 <- df_subset_sample %>% filter(Time_point == "T0") 
+  dim(df_subset_T0)
+  df_subset_T9 <- df_subset_sample %>% filter(Time_point == "T9") %>% rename(Log_rel_abundance_T9 = Log_rel_abundance)
+  dim(df_subset_T9)
+  
+  df_subset_T0 %<>% select(Family, Log_rel_abundance) %>% unique() %>% rename(Log_rel_abundance_T0 = Log_rel_abundance)
+  # merge and compute percent change
+  df_subset_T9 %<>% left_join(df_subset_T0, by = c("Family" = "Family"))
+  df_delta_relabun <- df_subset_T9 %>% mutate(Delta_log_rel = (Log_rel_abundance_T9 - Log_rel_abundance_T0) )
+  # when increased, it's better (multiply by (-))
+  head(df_delta_relabun)
+  dim(df_delta_relabun) # 875
+  colnames(df_delta_relabun)
+  
+  return(df_delta_relabun)
+}
+
+## Who are they?
+df_rel_abun_change_log <- generate_df_rel_abun_change_log(df_rel_log)
+dim(df_rel_abun_change_log)
+
+df_tracking <- df_rel_abun_change_log %>% filter(Delta_log_rel > 2.5, Perturbation == "Basic_perturbation", CHL=="None")
+dim(df_tracking)
+
+colnames(df_tracking)
+head(df_tracking)
+tail(df_tracking)
+
+df_famID <- df_tracking %>% select(Family, Soil) %>% unique()
+df_famID_B2 <- df_famID %>% filter(Soil == "Barneveld2") %>% select(Family) %>% unlist()
+df_famID_LB1 <- df_famID %>% filter(Soil == "LaBaghWoods1") %>% select(Family) %>% unlist()
+
+# get the taxa table
+vec_fam_B2 <- df_family_indexing %>% filter(FamilyID %in% df_famID_B2)
+vec_fam_LB1 <- df_family_indexing %>% filter(FamilyID %in% df_famID_LB1)
+
+# what are their higher taxa level?
+
+df_taxtable <- as.matrix(tax_table(phy.clean.neg))
+df_taxtable <- as.data.frame(df_taxtable, row.names = FALSE)
+df_taxtable_family <- df_taxtable %>% select(Family, Order, Class, Phylum, Kingdom) %>% unique()
+
+#
+
+df_taxtable_family %>% filter(Family %in% vec_fam_B2$Family_taxa) %>% left_join(vec_fam_B2, by=c("Family"="Family_taxa")) %>% arrange(FamilyID)
+
+df_taxtable_family %>% filter(Family %in% vec_fam_LB1$Family_taxa) %>% left_join(vec_fam_LB1, by=c("Family"="Family_taxa")) %>% arrange(FamilyID)
+```
+
+
+
+
 
 ## Let's see if rank changes
 
@@ -1783,6 +2464,7 @@ plot_rank_change(mlt_rank_rel, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoo
 
 
 ```
+
 
 ## Get average of replicates
 
@@ -2326,4 +3008,636 @@ grid.arrange(grobs = l_pma, nrow = 2)
                  Title = "[PMA] Barneveld2(pH5.73): Basic pH perturbation to pH 8.5"))
 
 ```
+
+
+
+## (8/15/22) Inner product analysis
+First, normalize
+
+## Work with log relative abundance then get inner product
+```{r}
+# relative abundance
+mat_rel2
+dim(mat_rel2)
+mat_rel2[is.na(mat_rel2)]
+sum(is.na(mat_rel2))  # 4116
+305 * 37
+
+# log relative abundance
+mat_rel2_log <- log(mat_rel2)
+dim(mat_rel2_log)
+sum(is.na(mat_rel2_log))  # 4116
+
+# normalized log  
+mat_rel2_log[is.na(mat_rel2_log)] <- 0   # make NA to 0
+mat_rel2_log
+dim(mat_rel2_log)
+
+euclidean_norm <- function(x) x/sqrt(sum(x^2)) # Euclidean normalization
+apply(mat_rel2_log, 2, euclidean_norm) # column wise
+mat_rel2_log_norm <- apply(mat_rel2_log, 2, euclidean_norm) 
+dim(mat_rel2_log_norm)
+
+## rank matrix per column
+library(matrixStats)
+## how to calculate ranks
+x <- cbind(a=c(1,2,4),
+       b=c(3,2,NA),
+       c=c(3,5,1))
+x
+# apply(x, 2, rank)
+x[is.na(x)] <- 0
+apply(x, 2, euclidean_norm) # this works!
+
+# compute inner product
+mat_rel2_log_norm[is.na(mat_rel2_log_norm)]  # no NAs
+dim(mat_rel2_log_norm)
+sum(is.na(mat_rel2_log_norm))  # 0
+
+mat_rel2_log_norm[is.na(mat_rel2)]
+
+mat_inner_product <- t(mat_rel2_log_norm) %*% mat_rel2_log_norm
+dim(mat_inner_product)
+mat_inner_product[is.na(mat_inner_product)]
+
+# let's look at the values
+mat_inner_product[lower.tri(mat_inner_product, diag=T)] <- NA
+mlt_inner_product <- melt(mat_inner_product)
+dim(mlt_inner_product) # 666
+mlt_inner_product <- na.omit(mlt_inner_product)
+dim(mlt_inner_product) # 666
+
+l_var <- unique(mlt_inner_product$Var1)
+l_var2 <- l_var[!grepl("PMA", l_var)] # remove PMA samples
+l_var3 <- l_var2[!grepl("LaBaghWoods", l_var2)] # remove LaBagh samples
+l_T0 <- l_var3[grepl("Barneveld2_T0", l_var3)] # T0 samples
+
+ip_filt <- mlt_inner_product %>% filter(Var1 %in% l_T0, Var2 %in% l_var3)
+ip_filt 
+
+# left_join meta data to plot
+df_meta_ip <- df_meta %>% select(ReplicateID, Soil, Time_point, Sample_name) %>% unique() %>% arrange(ReplicateID)
+dim(df_meta_ip)
+
+ip_filt2 <- ip_filt %>% left_join(df_meta_ip, by=c("Var2"="ReplicateID"))
+
+ip_filt2$Sample_name <- factor(ip_filt2$Sample_name, levels = l_sample_names)
+
+
+ggplot(ip_filt2, aes(x=Sample_name, y=value, fill = Sample_name)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  geom_boxplot(width = 0.1) +
+  geom_dotplot(binaxis = "y",
+               stackdir = "center",
+               dotsize = 0.5) +
+  ggtitle(paste0("Inner product of community vector X")) +
+  scale_fill_manual(values = c("darkgrey","red","blue","red","blue")) +
+  ylab("< Normalized X_T0, Noramlized X_[  ] > \nX is a community vector of log relative abundance") +
+  xlab("\nSample") +
+  mytheme_2d
+
+# beeswarm
+# install.packages("ggbeeswarm")
+library(ggbeeswarm)
+ggplot(ip_filt2, aes(x=Sample_name, y=value, fill = Sample_name)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  geom_boxplot(width = 0.09) +
+  geom_beeswarm(shape = 21, size = 3) +
+  ggtitle(paste0("Inner product of community vector X")) +
+  scale_fill_manual(values = c("darkgrey","red","blue","red","blue")) +
+  ylab("< Normalized X_T0, Noramlized X_[  ] > \nX is a community vector of log relative abundance") +
+  xlab("\nSample") +
+  mytheme_2d
+
+# 1 - inner product
+# ip_filt2$value <- 1 - ip_filt2$value
+ggplot(ip_filt2, aes(x=Sample_name, y= 1-value, fill = Sample_name)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  geom_boxplot(width = 0.1) +
+  geom_dotplot(binaxis = "y",
+               stackdir = "center",
+               dotsize = 0.5) +
+  ggtitle(paste0("Divergence from T0 = 1 - Inner product of community vector X")) +
+  scale_fill_manual(values = c("darkgrey","red","blue","red","blue")) +
+  ylab("1 - < Normalized X_T0, Noramlized X_[  ] > \nX is a community vector of log relative abundance") +
+  xlab("\nSample") +
+  mytheme_2d
+
+# significance testing
+library(ggpubr)
+my_comparisons <- list(c("Barneveld2_T9_H0_CHL", "Barneveld2_T9_H0"), c("Barneveld2_T9_H0_CHL", "Barneveld2_T9_OH10_CHL"), c("Barneveld2_T9_H0","Barneveld2_T9_OH10"), c("Barneveld2_T9_OH10","Barneveld2_T9_OH10_CHL"))
+unique(ip_filt2$Sample_name)
+ggplot(ip_filt2, aes(x=Sample_name, y= 1-value, fill = Sample_name)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  geom_boxplot(width = 0.1) +
+  geom_dotplot(binaxis = "y",
+               stackdir = "center",
+               dotsize = 0.5) +
+  ggtitle(paste0("Divergence from T0 = 1 - Inner product of community vector X")) +
+  scale_fill_manual(values = c("darkgrey","red","blue","red","blue")) +
+  ylab("1 - < Normalized X_T0, Noramlized X_[  ] > \nX is a community vector of log relative abundance") +
+  xlab("\nSample") +
+  mytheme_2d+
+  stat_compare_means(comparisons = my_comparisons) +
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "Barneveld2_T0", label.y = 0.09)
+
+
+```
+
+## Look into LaBagh samples as well
+
+```{r}
+
+generate_ip_filt <- function(mlt_inner_product, Remove_soil = "Barneveld2"){
+  l_var <- unique(mlt_inner_product$Var1)
+  l_var2 <- l_var[!grepl("PMA", l_var)] # remove PMA samples
+  l_var3 <- l_var2[!grepl(Remove_soil, l_var2)] # remove LaBagh samples
+  l_T0 <- l_var3[grepl("T0", l_var3)] # T0 samples
+  
+  ip_filt <- mlt_inner_product %>% filter(Var1 %in% l_T0, Var2 %in% l_var3)
+  ip_filt 
+  
+  # left_join meta data to plot
+  df_meta_ip <- df_meta %>% select(ReplicateID, Soil, Time_point, Sample_name) %>% unique() %>% arrange(ReplicateID)
+  dim(df_meta_ip)
+  
+  ip_filt2 <- ip_filt %>% left_join(df_meta_ip, by=c("Var2"="ReplicateID"))
+  return(ip_filt2)
+}
+
+ip_filt_LaBagh <- generate_ip_filt(mlt_inner_product, Remove_soil = "Barneveld2")
+ip_filt_LaBagh$Sample_name <- factor(ip_filt_LaBagh$Sample_name, levels = l_sample_names)
+
+# plot
+ggplot(ip_filt_LaBagh, aes(x=Sample_name, y=value, fill = Sample_name)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  geom_boxplot(width = 0.1) +
+  geom_dotplot(binaxis = "y",
+               stackdir = "center",
+               dotsize = 0.5) +
+  ggtitle(paste0("Inner product of community vector X")) +
+  scale_fill_manual(values = c("darkgrey","red","blue","red","blue")) +
+  ylab("< Normalized X_T0, Noramlized X_[  ] > \nX is a community vector of log relative abundance") +
+  xlab("\nSample") +
+  mytheme_2d
+
+# 1 - inner product
+# ip_filt2$value <- 1 - ip_filt2$value
+ggplot(ip_filt_LaBagh, aes(x=Sample_name, y= 1-value, fill = Sample_name)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  geom_boxplot(width = 0.1) +
+  geom_dotplot(binaxis = "y",
+               stackdir = "center",
+               dotsize = 0.5) +
+  ggtitle(paste0("Divergence from T0 = 1 - Inner product of community vector X")) +
+  scale_fill_manual(values = c("darkgrey","red","blue","red","blue")) +
+  ylab("1 - < Normalized X_T0, Noramlized X_[  ] > \nX is a community vector of log relative abundance") +
+  xlab("\nSample") +
+  mytheme_2d
+
+# significance testing
+library(ggpubr)
+my_comparisons <- list(c("LaBaghWoods1_T9_H0_CHL", "LaBaghWoods1_T9_H0"), c("LaBaghWoods1_T9_H0_CHL", "LaBaghWoods1_T9_OH8_CHL"), c("LaBaghWoods1_T9_H0","LaBaghWoods1_T9_OH8"), c("LaBaghWoods1_T9_OH8","LaBaghWoods1_T9_OH8_CHL"))
+unique(ip_filt_LaBagh$Sample_name)
+ggplot(ip_filt_LaBagh, aes(x=Sample_name, y= 1-value, fill = Sample_name)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  geom_boxplot(width = 0.1) +
+  geom_dotplot(binaxis = "y",
+               stackdir = "center",
+               dotsize = 0.5) +
+  ggtitle(paste0("Divergence from T0 = 1 - Inner product of community vector X")) +
+  scale_fill_manual(values = c("darkgrey","red","blue","red","blue")) +
+  ylab("1 - < Normalized X_T0, Noramlized X_[  ] > \nX is a community vector of log relative abundance") +
+  xlab("\nSample") +
+  mytheme_2d+
+  stat_compare_means(comparisons = my_comparisons) +
+  stat_compare_means(label = "p.signif", method = "t.test",
+                     ref.group = "LaBaghWoods1_T0", label.y = 0.09)
+
+```
+
+## 220821 Let's implement the cumulative inclusion (bottom up) and plot inner product
+
+```{r}
+
+
+subset_inner_product <- function(mat_rel2, mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL")){
+  
+  # relative abundance
+  mat_rel2
+  dim(mat_rel2)
+  mat_rel2[is.na(mat_rel2)]
+  sum(is.na(mat_rel2))  # 4116
+
+  # log relative abundance
+  mat_rel2_log <- log(mat_rel2)
+  dim(mat_rel2_log)
+  sum(is.na(mat_rel2_log))  # 4116
+  
+  # normalized log  
+  mat_rel2_log[is.na(mat_rel2_log)] <- 0   # make NA to 0
+  mat_rel2_log
+  dim(mat_rel2_log)
+  
+  euclidean_norm <- function(x) x/sqrt(sum(x^2)) # Euclidean normalization
+  apply(mat_rel2_log, 2, euclidean_norm) # column wise
+  
+  # I need to subset and then normalize
+  # need to get the vector of averaged rank from T0 sample
+  df_B_H0 <- mlt_rank_rel_log %>% filter(Sample_name %in% vec_Sample_name) 
+  vec_family_B_H0 <- df_B_H0 %>% filter(Time_point == "T0") %>% group_by(Family) %>% summarize(Ave_rel_abundance = mean(Rel_abundance, na.rm=T)) %>% arrange(desc(Ave_rel_abundance)) %>% select(Family)
+  dim(vec_family_B_H0)
+  vec_family_B_H0 <- vec_family_B_H0$Family
+  vec_bottom_up <- rev(vec_family_B_H0)
+  
+  # Create a for loop to make a matrix
+  l_cumulative <- list()
+  for (i in 2:length(vec_family_B_H0)){
+    print(i)
+    # start from bottom
+    # print(vec_bottom_up[1:i])
+    # subset the matrix and normalize
+    mat_rel2_log_ss <- mat_rel2_log[vec_bottom_up[1:i],]
+    mat_rel2_log_ss_norm <- apply(mat_rel2_log_ss, 2, euclidean_norm)
+    mat_rel2_log_ss_norm[is.na(mat_rel2_log_ss_norm)] <- 0 # make NaN into 0
+    
+    # compute inner product
+    sum(is.na(mat_rel2_log_ss_norm))  # 0
+    mat_rel2_log_ss_norm[is.na(mat_rel2_log_ss_norm)]
+    mat_inner_product <- t(mat_rel2_log_ss_norm) %*% mat_rel2_log_ss_norm
+    dim(mat_inner_product)
+    mat_inner_product[is.na(mat_inner_product)]
+    
+    # let's look at the values
+    mat_inner_product[lower.tri(mat_inner_product, diag=T)] <- NA
+    mlt_inner_product <- melt(mat_inner_product)
+    dim(mlt_inner_product) # 666
+    mlt_inner_product <- na.omit(mlt_inner_product)
+    dim(mlt_inner_product) # 666
+    
+    l_var <- unique(mlt_inner_product$Var1)
+    l_var2 <- l_var[!grepl("PMA", l_var)] # remove PMA samples
+    l_var3 <- l_var2[grepl(paste(vec_Sample_name, collapse="|"), l_var2)]
+    l_T0 <- l_var3[grepl("T0", l_var3)] # T0 samples
+    
+    ip_filt <- mlt_inner_product %>% filter(Var1 %in% l_T0, Var2 %in% l_var3)
+    ip_filt 
+    
+    # left_join meta data to plot
+    df_meta_ip <- df_meta %>% select(ReplicateID, Soil, Time_point, Sample_name) %>% unique() %>% arrange(ReplicateID)
+    dim(df_meta_ip)
+    
+    ip_filt2 <- ip_filt %>% left_join(df_meta_ip, by=c("Var2"="ReplicateID"))
+    ip_filt2$Sample_name <- factor(ip_filt2$Sample_name, levels = l_sample_names)
+    print(paste0("This is i:", i))
+    print(head(ip_filt2))
+    l_cumulative[[i-1]] <- list(
+      vec_size = i,
+      inner_product_dataframe = ip_filt2
+    )
+  } 
+  return(l_cumulative)
+}
+
+
+list_ip1 <- subset_inner_product(mat_rel2, mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"))
+
+list_ip2 <- subset_inner_product(mat_rel2, mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_OH10", "Barneveld2_T9_OH10_CHL"))
+
+list_ip3 <- subset_inner_product(mat_rel2, mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_H0", "LaBaghWoods1_T9_H0_CHL"))
+
+list_ip4 <- subset_inner_product(mat_rel2, mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_OH8", "LaBaghWoods1_T9_OH8_CHL"))
+
+list_ip1[[10]]
+list_ip1[[100]]
+list_ip1[[200]]
+
+
+# make dataframe to plot cumulative plot
+generate_df_cumulative_inner_product <- function(mat_rel2, mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL")){
+  
+  # relative abundance
+  mat_rel2
+  dim(mat_rel2)
+  mat_rel2[is.na(mat_rel2)]
+  sum(is.na(mat_rel2))  # 4116
+
+  # log relative abundance
+  mat_rel2_log <- log(mat_rel2)
+  dim(mat_rel2_log)
+  sum(is.na(mat_rel2_log))  # 4116
+  
+  # normalized log  
+  mat_rel2_log[is.na(mat_rel2_log)] <- 0   # make NA to 0
+  mat_rel2_log
+  dim(mat_rel2_log)
+  
+  euclidean_norm <- function(x) x/sqrt(sum(x^2)) # Euclidean normalization
+  apply(mat_rel2_log, 2, euclidean_norm) # column wise
+  
+  # I need to subset and then normalize
+  # need to get the vector of averaged rank from T0 sample
+  df_B_H0 <- mlt_rank_rel_log %>% filter(Sample_name %in% vec_Sample_name) 
+  vec_family_B_H0 <- df_B_H0 %>% filter(Time_point == "T0") %>% group_by(Family) %>% summarize(Ave_rel_abundance = mean(Rel_abundance, na.rm=T)) %>% arrange(desc(Ave_rel_abundance)) %>% select(Family)
+  dim(vec_family_B_H0)
+  vec_family_B_H0 <- vec_family_B_H0$Family
+  vec_bottom_up <- rev(vec_family_B_H0)
+  
+  # Create a for loop to make a dataframe
+  df_cumulative <- data.frame()
+  for (i in 2:length(vec_family_B_H0)){
+    print(i)
+    # start from bottom
+    # print(vec_bottom_up[1:i])
+    # subset the matrix and normalize
+    mat_rel2_log_ss <- mat_rel2_log[vec_bottom_up[1:i],]
+    mat_rel2_log_ss_norm <- apply(mat_rel2_log_ss, 2, euclidean_norm)
+    mat_rel2_log_ss_norm[is.na(mat_rel2_log_ss_norm)] <- 0 # make NaN into 0
+    
+    # compute inner product
+    sum(is.na(mat_rel2_log_ss_norm))  # 0
+    mat_rel2_log_ss_norm[is.na(mat_rel2_log_ss_norm)]
+    mat_inner_product <- t(mat_rel2_log_ss_norm) %*% mat_rel2_log_ss_norm
+    dim(mat_inner_product)
+    mat_inner_product[is.na(mat_inner_product)]
+    
+    # let's look at the values
+    mat_inner_product[lower.tri(mat_inner_product, diag=T)] <- NA
+    mlt_inner_product <- melt(mat_inner_product)
+    dim(mlt_inner_product) # 666
+    mlt_inner_product <- na.omit(mlt_inner_product)
+    dim(mlt_inner_product) # 666
+    
+    l_var <- unique(mlt_inner_product$Var1)
+    l_var2 <- l_var[!grepl("PMA", l_var)] # remove PMA samples
+    l_var3 <- l_var2[grepl(paste(vec_Sample_name, collapse="|"), l_var2)]
+    l_T0 <- l_var3[grepl("T0", l_var3)] # T0 samples
+    
+    ip_filt <- mlt_inner_product %>% filter(Var1 %in% l_T0, Var2 %in% l_var3)
+    ip_filt 
+    
+    # left_join meta data to plot
+    df_meta_ip <- df_meta %>% select(ReplicateID, Soil, Time_point, Sample_name) %>% unique() %>% arrange(ReplicateID)
+    dim(df_meta_ip)
+    
+    ip_filt2 <- ip_filt %>% left_join(df_meta_ip, by=c("Var2"="ReplicateID"))
+    ip_filt2$Sample_name <- factor(ip_filt2$Sample_name, levels = l_sample_names)
+    
+    # compute average and std
+    ip_filt2$CHL <- ifelse(grepl("CHL",ip_filt2$Sample_name), "CHL", "No_CHL")
+    df_ip_i <- ip_filt2 %>% filter(Time_point == "T9") %>% group_by(CHL) %>% summarize(Ave_dot_product = mean(value), Std_dot_product = sd(value)) %>% ungroup() %>% mutate(Cumulative_size = i)
+    
+    # append to dataframe
+    df_cumulative <- rbind(df_cumulative, df_ip_i)
+  } 
+  return(df_cumulative)
+}
+
+df_cumulative1 <- generate_df_cumulative_inner_product(mat_rel2, mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"))
+
+df_cumulative2 <- generate_df_cumulative_inner_product(mat_rel2, mlt_rank_rel_log, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_OH10", "Barneveld2_T9_OH10_CHL"))
+
+df_cumulative3 <- generate_df_cumulative_inner_product(mat_rel2, mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_H0", "LaBaghWoods1_T9_H0_CHL"))
+
+df_cumulative4 <- generate_df_cumulative_inner_product(mat_rel2, mlt_rank_rel_log, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_OH8", "LaBaghWoods1_T9_OH8_CHL"))
+
+df_cumulative1 %>% tail()
+
+df_cumulative1
+
+# plot P
+ggplot(df_cumulative2, aes(x=Cumulative_size, y=Ave_dot_product, color=CHL, group=CHL)) +
+  geom_point(size=1.5, shape=16) +
+  geom_line(size=1.5)+
+  geom_errorbar(aes(ymin=Ave_dot_product - Std_dot_product, ymax=Ave_dot_product + Std_dot_product), width=.05)+
+  # scale_colour_gradientn(colours = (col_pH(100))) +
+  # scale_color_manual(values=col_pH(4)) +
+  ylab("< Normalized X_T0, Noramlized X_[  ] > \nX is a community vector of log relative abundance") +
+  xlab("\n Cumulative community size (from lowest rank to including higher)") +
+  # scale_y_continuous(breaks = seq(0,0.3,0.05), limits=c(0, 0.3))+
+  # label
+  # geom_text(aes(label = round(NO2_mM,3)), size = 3, vjust = -1.5, family="serif", show.legend = FALSE)+
+  mytheme_2d 
+  # facet_grid(. ~ Soil) +
+  # theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+  # theme(strip.text.x = element_text(size = 17))
+
+# plot 1-P
+ggplot(df_cumulative2, aes(x=Cumulative_size, y=1-Ave_dot_product, color=CHL, group=CHL)) +
+  geom_point(size=1.5, shape=16) +
+  geom_line(size=1.5)+
+  geom_errorbar(aes(ymin=1-Ave_dot_product - Std_dot_product, ymax=1-Ave_dot_product + Std_dot_product), width=.05)+
+  # scale_colour_gradientn(colours = (col_pH(100))) +
+  # scale_color_manual(values=col_pH(4)) +
+  ylab("1 - < Normalized X_T0, Noramlized X_[  ] > \nX is a community vector of log relative abundance") +
+  xlab("\n Cumulative community size (from lowest rank to including higher)") +
+  # scale_y_continuous(breaks = seq(0,0.3,0.05), limits=c(0, 0.3))+
+  # label
+  # geom_text(aes(label = round(NO2_mM,3)), size = 3, vjust = -1.5, family="serif", show.legend = FALSE)+
+  mytheme_2d 
+  # facet_grid(. ~ Soil) +
+  # theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+  # theme(strip.text.x = element_text(size = 17))
+
+# Let's plot it with function
+plot_cumulative_1_minus_inner_product <- function(df_cumulative1, Title){
+  ggplot(df_cumulative1, aes(x=Cumulative_size, y=1-Ave_dot_product, color=CHL, group=CHL)) +
+    geom_point(size=1.5, shape=16) +
+    geom_line(size=1.5)+
+    geom_errorbar(aes(ymin=1-Ave_dot_product - Std_dot_product, ymax=1-Ave_dot_product + Std_dot_product), width=.05)+
+    # scale_colour_gradientn(colours = (col_pH(100))) +
+    scale_color_manual(values = c("red","blue")) +
+    ylab("1 - < Normalized X_T0, Noramlized X_T9_[  ] > \nX is a community vector of log relative abundance\n") +
+    xlab("\n Cumulative community size (from lowest rank to including higher)") +
+    scale_y_continuous(breaks = seq(0,1,0.1), limits=c(0, 1))+
+    # label
+    # geom_text(aes(label = round(NO2_mM,3)), size = 3, vjust = -1.5, family="serif", show.legend = FALSE)+
+    ggtitle(paste0(Title)) +
+    mytheme_2dy 
+}
+
+(p_cip1 <- plot_cumulative_1_minus_inner_product(df_cumulative1, Title = "Barneveld2(pH5.73): No pH perturbation"))
+(p_cip2 <- plot_cumulative_1_minus_inner_product(df_cumulative2, Title = "Barneveld2(pH5.73): Basic pH perturbation to pH 8.5"))
+(p_cip3 <- plot_cumulative_1_minus_inner_product(df_cumulative3, Title = "LaBaghWoods1(pH6.66): No pH perturbation"))
+(p_cip4 <- plot_cumulative_1_minus_inner_product(df_cumulative4, Title = "LaBaghWoods1(pH6.66): Basic pH perturbation to pH 9.1"))
+
+l_plot_cip <- list()
+l_plot_cip[[1]] <- p_cip1
+l_plot_cip[[2]] <- p_cip2
+l_plot_cip[[3]] <- p_cip3
+l_plot_cip[[4]] <- p_cip4
+library(gridExtra)
+grid.arrange(grobs = l_plot_cip, ncol = 2)
+
+```
+
+## 220821 Let's compute windows of community
+
+```{r}
+# make dataframe to plot window plot
+generate_df_window_inner_product <- function(mat_rel2, mlt_rank_rel_log, strains_per_window=50, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL")){
+  
+  # relative abundance
+  mat_rel2
+  dim(mat_rel2)
+  mat_rel2[is.na(mat_rel2)]
+  sum(is.na(mat_rel2))  # 4116
+
+  # log relative abundance
+  mat_rel2_log <- log(mat_rel2)
+  dim(mat_rel2_log)
+  sum(is.na(mat_rel2_log))  # 4116
+  
+  # normalized log  
+  mat_rel2_log[is.na(mat_rel2_log)] <- 0   # make NA to 0
+  mat_rel2_log
+  dim(mat_rel2_log)
+  
+  euclidean_norm <- function(x) x/sqrt(sum(x^2)) # Euclidean normalization
+  apply(mat_rel2_log, 2, euclidean_norm) # column wise
+  
+  # I need to subset and then normalize
+  # need to get the vector of averaged rank from T0 sample
+  df_B_H0 <- mlt_rank_rel_log %>% filter(Sample_name %in% vec_Sample_name) 
+  vec_family_B_H0 <- df_B_H0 %>% filter(Time_point == "T0") %>% group_by(Family) %>% summarize(Ave_rel_abundance = mean(Rel_abundance, na.rm=T)) %>% arrange(desc(Ave_rel_abundance)) %>% select(Family)
+  dim(vec_family_B_H0)
+  vec_family_B_H0 <- vec_family_B_H0$Family
+  vec_bottom_up <- rev(vec_family_B_H0)
+  
+  # Create a for loop to make a dataframe
+  df_window <- data.frame()
+  for (i in 1:(length(vec_family_B_H0)-strains_per_window)){
+    print(paste0(i,"-",i+strains_per_window))
+    # start from bottom
+    # print(vec_bottom_up[1:i])
+    # subset the matrix and normalize
+    i_end = i+strains_per_window
+    mat_rel2_log_ss <- mat_rel2_log[vec_bottom_up[1:i_end],]
+    dim(mat_rel2_log_ss)
+    mat_rel2_log_ss_norm <- apply(mat_rel2_log_ss, 2, euclidean_norm)
+    mat_rel2_log_ss_norm[is.na(mat_rel2_log_ss_norm)] <- 0 # make NaN into 0
+    
+    # compute inner product
+    sum(is.na(mat_rel2_log_ss_norm))  # 0
+    mat_rel2_log_ss_norm[is.na(mat_rel2_log_ss_norm)]
+    mat_inner_product <- t(mat_rel2_log_ss_norm) %*% mat_rel2_log_ss_norm
+    dim(mat_inner_product)
+    mat_inner_product[is.na(mat_inner_product)]
+    
+    # let's look at the values
+    mat_inner_product[lower.tri(mat_inner_product, diag=T)] <- NA
+    mlt_inner_product <- melt(mat_inner_product)
+    dim(mlt_inner_product) # 666
+    mlt_inner_product <- na.omit(mlt_inner_product)
+    dim(mlt_inner_product) # 666
+    
+    l_var <- unique(mlt_inner_product$Var1)
+    l_var2 <- l_var[!grepl("PMA", l_var)] # remove PMA samples
+    l_var3 <- l_var2[grepl(paste(vec_Sample_name, collapse="|"), l_var2)]
+    l_T0 <- l_var3[grepl("T0", l_var3)] # T0 samples
+    
+    ip_filt <- mlt_inner_product %>% filter(Var1 %in% l_T0, Var2 %in% l_var3)
+    ip_filt 
+    
+    # left_join meta data to plot
+    df_meta_ip <- df_meta %>% select(ReplicateID, Soil, Time_point, Sample_name) %>% unique() %>% arrange(ReplicateID)
+    dim(df_meta_ip)
+    
+    ip_filt2 <- ip_filt %>% left_join(df_meta_ip, by=c("Var2"="ReplicateID"))
+    ip_filt2$Sample_name <- factor(ip_filt2$Sample_name, levels = l_sample_names)
+    
+    # compute average and std
+    ip_filt2$CHL <- ifelse(grepl("CHL",ip_filt2$Sample_name), "CHL", "No_CHL")
+    df_ip_i <- ip_filt2 %>% filter(Time_point == "T9") %>% group_by(CHL) %>% summarize(Ave_dot_product = mean(value), Std_dot_product = sd(value)) %>% ungroup() %>% mutate(window_start = i, window_end=i_end, window_range = paste0(i,"-",i+strains_per_window), window_size = strains_per_window)
+    
+    # append to dataframe
+    df_window <- rbind(df_window, df_ip_i)
+  } 
+  return(df_window)
+}
+
+strains_per_window_number = 50
+df_window1 <- generate_df_window_inner_product(mat_rel2, mlt_rank_rel_log, strains_per_window=strains_per_window_number, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_H0", "Barneveld2_T9_H0_CHL"))
+
+df_window2 <- generate_df_window_inner_product(mat_rel2, mlt_rank_rel_log, strains_per_window=strains_per_window_number, vec_Sample_name = c("Barneveld2_T0", "Barneveld2_T9_OH10", "Barneveld2_T9_OH10_CHL"))
+
+df_window3 <- generate_df_window_inner_product(mat_rel2, mlt_rank_rel_log, strains_per_window=strains_per_window_number, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_H0", "LaBaghWoods1_T9_H0_CHL"))
+
+df_window4 <- generate_df_window_inner_product(mat_rel2, mlt_rank_rel_log, strains_per_window=strains_per_window_number, vec_Sample_name = c("LaBaghWoods1_T0", "LaBaghWoods1_T9_OH8", "LaBaghWoods1_T9_OH8_CHL"))
+
+df_window1 %>% tail()
+
+df_window1
+
+# plot P
+ggplot(df_window2, aes(x=window_start, y=Ave_dot_product, color=CHL, group=CHL)) +
+  geom_point(size=1.5, shape=16) +
+  geom_line(size=1.5)+
+  geom_errorbar(aes(ymin=Ave_dot_product - Std_dot_product, ymax=Ave_dot_product + Std_dot_product), width=.05)+
+  # scale_colour_gradientn(colours = (col_pH(100))) +
+  scale_color_manual(values = c("red","blue")) +
+  ylab("< Normalized X_T0, Noramlized X_T9_[  ] > \nX is a community vector of log relative abundance\n") +
+  xlab(paste0("\n Window start with window size of ", strains_per_window_number," (from lowest rank to including higher)")) +
+  scale_y_continuous(breaks = seq(0,1,0.1), limits=c(0, 1))+
+  # label
+  # geom_text(aes(label = round(NO2_mM,3)), size = 3, vjust = -1.5, family="serif", show.legend = FALSE)+
+  # ggtitle(paste0(Title)) +
+  mytheme_2dy 
+
+# plot 1-P
+ggplot(df_window2, aes(x=window_start, y=1-Ave_dot_product, color=CHL, group=CHL)) +
+  geom_point(size=1.5, shape=16) +
+  geom_line(size=1.5)+
+  geom_errorbar(aes(ymin=1-Ave_dot_product - Std_dot_product, ymax=1-Ave_dot_product + Std_dot_product), width=.05)+
+  # scale_colour_gradientn(colours = (col_pH(100))) +
+  scale_color_manual(values = c("red","blue")) +
+  ylab("1 - < Normalized X_T0, Noramlized X_T9_[  ] > \nX is a community vector of log relative abundance\n") +
+  xlab(paste0("\n Window start with window size of ", strains_per_window_number," (from lowest rank to including higher)")) +
+  scale_y_continuous(breaks = seq(0,1,0.1), limits=c(0, 1))+
+  # label
+  # geom_text(aes(label = round(NO2_mM,3)), size = 3, vjust = -1.5, family="serif", show.legend = FALSE)+
+  # ggtitle(paste0(Title)) +
+  mytheme_2dy 
+
+# Let's plot it with function
+plot_window_1_minus_inner_product <- function(df_window1, Title, strains_per_window_number){
+  ggplot(df_window1, aes(x=window_start, y=1-Ave_dot_product, color=CHL, group=CHL)) +
+    geom_point(size=1.5, shape=16) +
+    geom_line(size=1.5)+
+    geom_errorbar(aes(ymin=1-Ave_dot_product - Std_dot_product, ymax=1-Ave_dot_product + Std_dot_product), width=.05)+
+    # scale_colour_gradientn(colours = (col_pH(100))) +
+    scale_color_manual(values = c("red","blue")) +
+    ylab("1 - < Normalized X_T0, Noramlized X_T9_[  ] > \nX is a community vector of log relative abundance\n") +
+    xlab(paste0("\n Window start with window size of ", strains_per_window_number," (from lowest rank to including higher)")) +
+    scale_y_continuous(breaks = seq(0,1,0.1), limits=c(0, 1))+
+    # label
+    # geom_text(aes(label = round(NO2_mM,3)), size = 3, vjust = -1.5, family="serif", show.legend = FALSE)+
+    ggtitle(paste0(Title)) +
+    mytheme_2dy 
+}
+
+(p_wip1 <- plot_window_1_minus_inner_product(df_window1, Title = "Barneveld2(pH5.73): No pH perturbation", strains_per_window_number))
+(p_wip2 <- plot_window_1_minus_inner_product(df_window2, Title = "Barneveld2(pH5.73): Basic pH perturbation to pH 8.5", strains_per_window_number))
+(p_wip3 <- plot_window_1_minus_inner_product(df_window3, Title = "LaBaghWoods1(pH6.66): No pH perturbation", strains_per_window_number))
+(p_wip4 <- plot_window_1_minus_inner_product(df_window4, Title = "LaBaghWoods1(pH6.66): Basic pH perturbation to pH 9.1", strains_per_window_number))
+
+l_plot_wip <- list()
+l_plot_wip[[1]] <- p_wip1
+l_plot_wip[[2]] <- p_wip2
+l_plot_wip[[3]] <- p_wip3
+l_plot_wip[[4]] <- p_wip4
+library(gridExtra)
+grid.arrange(grobs = l_plot_wip, ncol = 2)
+
+
+
+
+```
+
+
+
+
+
+
 
