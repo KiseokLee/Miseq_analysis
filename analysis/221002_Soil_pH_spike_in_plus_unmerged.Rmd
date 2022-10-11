@@ -1873,13 +1873,21 @@ ggplot(df_spikein_merge2, aes(x=ReplicateID, y=R_s / AbsAbundance, color = Spike
 
 ```
 
-
 ## Plot ASV rank abundance
 
 ```{r}
+## 221004 Remove the spike-in reads from relative abundance.
+vec_remove_spikein_strains <- c(rownames(df_asv_ecoli), rownames(df_asv_parabac))
+vec_remove_spikein_strains
+length(vec_remove_spikein_strains)
+
+phy.clean.10.no.spikein <- pop_taxa(phy.clean.10, vec_remove_spikein_strains)
+phy.clean.10
+phy.clean.10.no.spikein
+
 ## convert OTU table into relative abundance
 # how about using phy.clean.10
-otu_rel <- otu_table(phy.clean.10) # remove asv that has less than 10 reads total.
+otu_rel <- otu_table(phy.clean.10.no.spikein) # remove asv that has less than 10 reads total.
 class(otu_rel)
 
 hist(rowSums(otu_rel), breaks = 60)
@@ -1972,9 +1980,9 @@ ggplot(mlt_rank, aes(x = ASV, y = Rank)) +
 
 ```{r}
 ## group by Family level
-phy.clean.10 # 5467 ASV
+phy.clean.10.no.spikein # 5467 ASV -> 5442 ASV after removing spikein ASVs
 
-psmelt_family <- psmelt(phy.clean.10)
+psmelt_family <- psmelt(phy.clean.10.no.spikein)
 df_family <- psmelt_family %>% group_by(Sample, Sample_name, ReplicateID, Replicate, Family) %>% summarize(Abundance = sum(Abundance))
 
 # 40 samples total
@@ -2097,8 +2105,8 @@ table(mat_rank[,4]) %>% tail()
 mat_rank
 
 ## connect metadata to the asv table
-phy.clean.10
-mat_meta <- as.matrix(sample_data(phy.clean.10))
+phy.clean.10.no.spikein
+mat_meta <- as.matrix(sample_data(phy.clean.10.no.spikein))
 class(mat_meta)
 df_meta <- as.data.frame(mat_meta)
 class(df_meta)
@@ -2762,9 +2770,273 @@ annotate_figure(figure,
 
 ```
 
-## Is there a gradual change in relative log abundance?
-1. remove the spike in reads
-2. 
+## 221004 Is there a gradual change in relative log abundance?
+1. remove the spike in reads (did it above)
+2. Need to input delta pH value.
+2. Try absolute abundance later.
+
+```{r}
+
+
+df_rel_log
+colnames(df_rel_log)
+df_rel_log$Unit %>% unique() 
+
+dim(df_rel_log)
+
+# get NaOH 4 and 8
+df_naoh <- df_rel_log %>% filter(Unit %in% c(" 4"," 8"))
+dim(df_naoh)
+
+# get Redone samples
+df_re <- df_rel_log %>% filter(Spikein_added_ul == "None", Soil != "Positive")
+dim(df_re)
+df_re$Soil %>% unique()
+
+df_pHrel <- rbind(df_naoh, df_re)
+dim(df_pHrel)
+
+df_pHrel %>% unique() %>% dim() # 7398
+
+## Now input pH value (changed)
+ref_pH <- data.frame(Unit = c(" 0", " 4", " 8", "10"), pH = c(7.81, 8.72, 9.06, 9.12))
+df_pHrel %<>% left_join(ref_pH, by = c("Unit"="Unit"))
+dim(df_pHrel)
+colnames(df_pHrel)
+df_pHrel$delta_pH <- df_pHrel$pH - 7.81
+df_pHrel$delta_pH %>% unique()
+
+## Let's plot now!
+# total
+ggplot(df_pHrel, aes(x = delta_pH, y = Log_rel_abundance, color= Family, group = Family)) +
+  geom_point() +
+  geom_line() +
+  # ggtitle(paste0(Title)) +
+  # scale_color_manual(values = c("black","blue","red")) +
+  ylab("Log Relative abundance") +
+  xlab("delta pH") +
+  mytheme_2d +
+  theme(legend.position="none")
+
+# split CHL and None
+ggplot(df_pHrel, aes(x = delta_pH, y = Log_rel_abundance, color= Family, group = Family)) +
+  geom_point() +
+  geom_line() +
+  # ggtitle(paste0(Title)) +
+  # scale_color_manual(values = c("black","blue","red")) +
+  ylab("Log Relative abundance") +
+  xlab("delta pH") +
+  mytheme_2d +
+  theme(legend.position="none") +
+  facet_grid(. ~ CHL, switch="y") +
+  theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+  theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+
+df_pHrel %>% filter(Rank < 100) %>% dim()
+
+max(df_pHrel$Rank, na.rm=T) # 214 is the total rank
+
+# Top 10
+# split CHL and None
+ggplot(df_pHrel %>% filter(Rank < 10), aes(x = delta_pH, y = Log_rel_abundance, color= Family, group = Family)) +
+  geom_point() +
+  geom_line() +
+  # ggtitle(paste0(Title)) +
+  # scale_color_manual(values = c("black","blue","red")) +
+  ylab("Log Relative abundance") +
+  xlab("delta pH") +
+  mytheme_2d +
+  # theme(legend.position="none") +
+  ggtitle("Top 10 rank") +
+  facet_grid(. ~ CHL, switch="y") +
+  theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+  theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+
+
+# Top 50
+# split CHL and None
+ggplot(df_pHrel %>% filter(Rank < 50), aes(x = delta_pH, y = Log_rel_abundance, color= Family, group = Family)) +
+  geom_point() +
+  geom_line() +
+  # ggtitle(paste0(Title)) +
+  # scale_color_manual(values = c("black","blue","red")) +
+  ylab("Log Relative abundance") +
+  xlab("delta pH") +
+  mytheme_2d +
+  theme(legend.position="none") +
+  ggtitle("Top 50 rank") +
+  facet_grid(. ~ CHL, switch="y") +
+  theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+  theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+
+# Top 100
+# split CHL and None
+ggplot(df_pHrel %>% filter(Rank < 100), aes(x = delta_pH, y = Log_rel_abundance, color= Family, group = Family)) +
+  geom_point() +
+  geom_line() +
+  # ggtitle(paste0(Title)) +
+  # scale_color_manual(values = c("black","blue","red")) +
+  ylab("Log Relative abundance") +
+  xlab("delta pH") +
+  mytheme_2d +
+  theme(legend.position="none") +
+  ggtitle("Top 100 rank") +
+  facet_grid(. ~ CHL, switch="y") +
+  theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+  theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+
+
+# Bottom 100
+# split CHL and None
+ggplot(df_pHrel %>% filter(Rank > 100), aes(x = delta_pH, y = Log_rel_abundance, color= Family, group = Family)) +
+  geom_point() +
+  geom_line() +
+  # ggtitle(paste0(Title)) +
+  # scale_color_manual(values = c("black","blue","red")) +
+  ylab("Log Relative abundance") +
+  xlab("delta pH") +
+  mytheme_2d +
+  theme(legend.position="none") +
+  ggtitle("Bottom 100 rank") +
+  facet_grid(. ~ CHL, switch="y") +
+  theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+  theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+
+## plot with rank
+# split CHL and None
+ggplot(df_pHrel, aes(x = delta_pH, y = Rank, color= Family, group = Family)) +
+  geom_point() +
+  geom_line() +
+  # ggtitle(paste0(Title)) +
+  # scale_color_manual(values = c("black","blue","red")) +
+  ylab("Rank") +
+  xlab("delta pH") +
+  mytheme_2d +
+  theme(legend.position="none") +
+  facet_grid(. ~ CHL, switch="y") +
+  theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+  theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+
+## Plot delta log relative abundance
+df_pHrel$Sample %>% unique()
+colnames(df_pHrel)
+
+df_pHrel$Sample2 <- str_remove(df_pHrel$Sample, "_CHL")
+df_pHrel$Sample2 %>% unique()
+
+df_pHrel2 <- df_pHrel
+df_pHrel2 %<>% select(Sample2, Family, Log_rel_abundance, CHL, delta_pH)
+dim(df_pHrel2)
+df_pHrel2 %>% unique() %>% dim()
+
+head(df_pHrel2)
+
+# reshape
+dc_pHrel2 <- dcast(df_pHrel2, Sample2+Family+delta_pH ~ CHL, value.var = "Log_rel_abundance" )
+dc_pHrel2$delta_Log_rel_abundance <- dc_pHrel2$None - dc_pHrel2$CHL
+
+# plot
+ggplot(dc_pHrel2, aes(x = delta_pH, y = delta_Log_rel_abundance, color= Family, group = Family)) +
+  geom_point() +
+  geom_line() +
+  # ggtitle(paste0(Title)) +
+  # scale_color_manual(values = c("black","blue","red")) +
+  ylab("delta Log relative abundance (None - CHL)") +
+  xlab("delta pH") +
+  mytheme_2d+
+  theme(legend.position="none")
+
+# Top 100
+# plot
+ggplot(dc_pHrel2 %>% filter(Rank < 100), aes(x = delta_pH, y = delta_Log_rel_abundance, color= Family, group = Family)) +
+  geom_point() +
+  geom_line() +
+  # ggtitle(paste0(Title)) +
+  # scale_color_manual(values = c("black","blue","red")) +
+  ylab("delta Log relative abundance (None - CHL)") +
+  xlab("delta pH") +
+  ggtitle("Top 100 rank") +
+  mytheme_2d +
+  theme(legend.position="none")
+
+```
+
+## Plotting delta pH with colors
+
+```{r}
+vec_family <- df_pHrel %>% filter(Time_point == "T0") %>% group_by(Family) %>% summarize(Ave_rel_abundance = mean(Rel_abundance, na.rm=T)) %>% arrange(desc(Ave_rel_abundance)) %>% select(Family)
+  
+dim(vec_family)
+head(vec_family)
+vec_family <- vec_family$Family
+
+print(vec_family)
+
+df_pHrel3 <- df_pHrel
+df_pHrel3$Family <- factor(df_pHrel3$Family, levels = vec_family)
+
+colnames(df_pHrel3)
+
+# remove T0
+dim(df_pHrel3)
+df_pHrel3 %<>% filter(Time_point != "T0")
+dim(df_pHrel3)
+
+df_pHrel3 %>% select(Time_point) %>% unique()
+
+ggplot(df_pHrel3, aes(x = Family, y = Log_rel_abundance)) +
+  # geom_line(aes(col=Sample)) +
+  geom_point(aes(col=CHL, shape =Replicate), size=2, alpha = 0.6) +
+  # ggtitle(paste0(Title)) +
+  # scale_y_continuous(breaks=seq(-7.5,7.5,1), limits = c(-7.5, 7.5))+
+  scale_color_manual(values = c("blue","red")) +
+  ylab("Log Relative abundance") +
+  xlab("Family ID (starting from highest rank at T0)") +
+  mytheme_2d +
+  theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())+
+  facet_grid(Soil ~ delta_pH, switch="y") +
+  theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+  theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+
+ggplot(df_pHrel3, aes(x = Family, y = Log_rel_abundance)) +
+  # geom_line(aes(col=Sample)) +
+  geom_point(aes(col=CHL, size = (delta_pH +1)/3), alpha = 0.6) +
+  # ggtitle(paste0(Title)) +
+  # scale_y_continuous(breaks=seq(-7.5,7.5,1), limits = c(-7.5, 7.5))+
+  scale_color_manual(values = c("blue","red")) +
+  ylab("Log Relative abundance") +
+  xlab("Family ID (starting from highest rank at T0)") +
+  mytheme_2d +
+  theme(axis.text.x = element_blank(), axis.ticks.x=element_blank())
+  # facet_grid(Soil ~ delta_pH, switch="y") +
+  # theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+  # theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+
+
+df_pHrel4 <- df_pHrel3
+df_pHrel4$delta_pH <- factor(df_pHrel4$delta_pH)
+
+ggplot(df_pHrel4, aes(x = Family, y = Log_rel_abundance)) +
+  # geom_line(aes(col=Sample)) +
+  geom_point(aes(color = delta_pH), size=2, alpha = 0.6) +
+  # ggtitle(paste0(Title)) +
+  # scale_y_continuous(breaks=seq(-7.5,7.5,1), limits = c(-7.5, 7.5))+
+  # scale_color_manual(values = c("blue","red")) +
+  ylab("Log Relative abundance") +
+  xlab("Family ID (starting from highest rank at T0)") +
+  mytheme_2d +
+  theme(axis.text.x = element_blank(), axis.ticks.x=element_blank()) +
+  facet_grid(Soil ~ CHL, switch="y") +
+  theme(strip.background = element_rect(colour="black", fill="white", size=0.1))+
+  theme(strip.text.x = element_text(size = 17), strip.text.y = element_text(size = 17))
+
+
+
+
+
+
+
+```
 
 
 
